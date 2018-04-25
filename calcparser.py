@@ -37,7 +37,7 @@ def validate_brackets(expr, left='(', right=')'):
     return False
 
 
-def brackets_to_lists(expr, left='(', right=')'):
+def brackets_structure_parser(expr, left='(', right=')'):
     expr = ''.join(expr.split())
     result = []
     content = []
@@ -49,7 +49,7 @@ def brackets_to_lists(expr, left='(', right=')'):
             if content:
                 result.append(''.join(content))
                 content = []
-            nested_content, jump = brackets_to_lists(expr[idx+1:])
+            nested_content, jump = brackets_structure_parser(expr[idx + 1:])
             idx += jump
             result.append(nested_content)
 
@@ -68,4 +68,4 @@ def brackets_to_lists(expr, left='(', right=')'):
 
 if __name__ == '__main__':
     print(validate_brackets('()   ()()   ((()))'))
-    print(brackets_to_lists('(sin(213+34.5) - round(32.3))^2'))
+    print(brackets_structure_parser('(sin(213+34.5) - round(32.3))^2'))

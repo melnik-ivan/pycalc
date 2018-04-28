@@ -7,6 +7,20 @@ Operator = namedtuple('Operator', 'pattern execute weight unary')
 Constant = namedtuple('Constant', 'pattern value')
 Bracket = namedtuple('Bracket', 'side level')
 
+
+def comma_operator(left, right):
+    if type(left) is tuple and type(right) is tuple:
+        return left + right
+    elif type(left) is not tuple and type(right) is not tuple:
+        return left, right
+    elif type(left) is tuple:
+        return left + (right,)
+    elif type(right) is tuple:
+        return (left, ) + right
+    else:
+        raise TypeError
+
+
 CONSTANTS = [
     Constant('pi', pi)
 ]
@@ -19,6 +33,7 @@ FUNCTIONS = [
 ]
 
 OPERATORS = [
+    Operator(',', comma_operator, 13, None),
     Operator('^', pow, 12, None),
     Operator('*', mul, 11, None),
     Operator('//', floordiv, 10, None),
@@ -96,19 +111,23 @@ def get_subject(pattern, subjects):
     return None
 
 
-def get_float(pattern):
-    result = None
+def get_number(pattern):
     try:
-        result = float(pattern)
+        return int(pattern)
     except ValueError:
         pass
-    return result
+
+    try:
+        return float(pattern)
+    except ValueError:
+        pass
+    return None
 
 
 def execute(expr, bracket_left='(', bracket_right=')', operators=OPERATORS, functions=FUNCTIONS, constants=CONSTANTS):
     expr = cut_out_external_brackets(expr)
     expr_replaced = replace_brackets_content(expr)
-    result = get_float(expr)
+    result = get_number(expr)
     if result is not None:
         return result
     result = get_subject(expr, constants)
@@ -134,7 +153,11 @@ def execute(expr, bracket_left='(', bracket_right=')', operators=OPERATORS, func
         func, right = expr[function_idx[0]: function_idx[1]], expr[function_idx[1]:]
         func = get_subject(func, functions)
         if right != '':
-            return func.execute(execute(right))
+            res = execute(right)
+            if type(res) is tuple:
+                return func.execute(*res)
+            else:
+                return func.execute(res)
         else:
             return func.execute()
 
@@ -143,3 +166,4 @@ def execute(expr, bracket_left='(', bracket_right=')', operators=OPERATORS, func
 
 if __name__ == '__main__':
     print(execute('(sin(213+34.5)-round(32.3))^2'))
+    print(execute('round(1.012,2)'))

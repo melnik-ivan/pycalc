@@ -2,9 +2,9 @@ from operator import add, sub, mul, truediv, floordiv, mod, pow, lt, le, eq, ne,
 from collections import namedtuple
 from math import sin, pi
 
-Func = namedtuple('Func', 'name execute weight')
-Operator = namedtuple('Operator', 'name execute weight can_by_unary')
-Constant = namedtuple('Constant', 'name value')
+Func = namedtuple('Func', 'pattern execute weight')
+Operator = namedtuple('Operator', 'pattern execute weight unary')
+Constant = namedtuple('Constant', 'pattern value')
 Bracket = namedtuple('Bracket', 'side level')
 
 CONSTANTS = [
@@ -12,148 +12,134 @@ CONSTANTS = [
 ]
 
 FUNCTIONS = [
-    Func('sin', sin, 100),
-    Func('abs', abs, 100),
-    Func('pow', pow, 100),
-    Func('round', round, 100),
+    Func('sin', sin, 16),
+    Func('abs', abs, 15),
+    Func('pow', pow, 14),
+    Func('round', round, 13),
 ]
 
 OPERATORS = [
-    Operator('^', pow, 12, False),
-    Operator('*', mul, 11, False),
-    Operator('//', floordiv, 10, False),
-    Operator('/', truediv, 9, False),
-    Operator('%', mod, 8, False),
-    Operator('+', add, 7, True),
-    Operator('-', sub, 6, True),
-    Operator('<=', le, 5, False),
-    Operator('<', lt, 4, False),
-    Operator('==', eq, 3, False),
-    Operator('!=', ne, 2, False),
-    Operator('>=', ge, 1, False),
-    Operator('>', gt, 0, False),
+    Operator('^', pow, 12, None),
+    Operator('*', mul, 11, None),
+    Operator('//', floordiv, 10, None),
+    Operator('/', truediv, 9, None),
+    Operator('%', mod, 8, None),
+    Operator('+', add, 7, lambda x: 0 + x),
+    Operator('-', sub, 6, lambda x: 0 - x),
+    Operator('<=', le, 5, None),
+    Operator('<', lt, 4, None),
+    Operator('==', eq, 3, None),
+    Operator('!=', ne, 2, None),
+    Operator('>=', ge, 1, None),
+    Operator('>', gt, 0, None),
 ]
 
+OPERATORS.sort(key=lambda op: op.weight)
 
-class Expression:
-    # Todo: Docstring, unittests
-    def __init__(
-            self,
-            expr,
-            funcs=None,
-            ops=None,
-            consts=None,
-            bracket_left='(',
-            bracket_right=')',
-            float_symbols='0123456789.'
-    ):
-        # Todo: Docstring, unittests
-        self._expr = ''.join(expr.split())
-        self._rendered_expr = []
-        self._funcs = funcs or FUNCTIONS
-        self._ops = ops or OPERATORS
-        self._consts = consts or CONSTANTS
-        self._float_symbols = float_symbols
-        self._bracket_left = bracket_left
-        self._bracket_right = bracket_right
-        self._bracket_level = 0
-        self._scissors = []
-        self.scissors_registrar()
+# Todo: brackets validator
 
-    def validate_brackets(self):
-        # Todo: Docstring, unittests
-        count = 0
-        for sym in self._expr:
-            if sym == self._bracket_left:
-                count += 1
-            elif sym == self._bracket_right:
-                count -= 1
-            if count < 0:
-                return False
-        if count == 0:
-            return True
+
+def have_external_brackets(expr, bracket_left='(', bracket_right=')'):
+    if not (expr.startswith(bracket_left) and expr.endswith(bracket_right)):
         return False
+    brackets_level = 0
+    for sym in expr[:-1]:
+        if sym == bracket_left:
+            brackets_level += 1
+        elif sym == bracket_right:
+            brackets_level -= 1
+            if brackets_level == 0:
+                return False
+    return True
 
-    def scissors_registrar(self):
-        # Todo: Docstring, unittests
-        for name, attr in self.__class__.__dict__.items():
-            if name.endswith('scissor'):
-                if attr not in self._scissors:
-                    self._scissors.append(attr)
 
-    def float_scissor(self, shift):
-        # Todo: Docstring, unittests
-        number = ''
-        for sym in self._expr[shift:]:
-            if sym in self._float_symbols:
-                number += sym
+def cut_out_external_brackets(expr, bracket_left='(', bracket_right=')'):
+    if have_external_brackets(expr, bracket_left=bracket_left, bracket_right=bracket_right):
+        expr = expr[1:-1]
+    return expr
+
+
+def replace_brackets_content(expr, placeholder='@', bracket_left='(', bracket_right=')'):
+    result = []
+    brackets_level = 0
+    for sym in expr:
+        if sym == bracket_left:
+            brackets_level += 1
+            result.append(placeholder)
+        elif sym == bracket_right:
+            brackets_level -= 1
+            result.append(placeholder)
+        elif brackets_level > 0:
+            result.append(placeholder)
+        elif brackets_level == 0:
+            result.append(sym)
+        else:
+            raise SyntaxError('invalid brackets structure')
+    return ''.join(result)
+
+
+def min_weight_slice(expr, subjects, _sorted=True):
+    if not _sorted:
+        subjects = sorted(subjects, key=lambda x: x.weight)
+    for subject in subjects:
+        if subject.pattern in expr:
+            idx0 = expr.find(subject.pattern)
+            idx1 = idx0 + len(subject.pattern)
+            return idx0, idx1
+    return None
+
+
+def get_subject(pattern, subjects):
+    for subject in subjects:
+        if subject.pattern == pattern:
+            return subject
+    return None
+
+
+def get_float(pattern):
+    result = None
+    try:
+        result = float(pattern)
+    except ValueError:
+        pass
+    return result
+
+
+def execute(expr, bracket_left='(', bracket_right=')', operators=OPERATORS, functions=FUNCTIONS, constants=CONSTANTS):
+    expr = cut_out_external_brackets(expr)
+    expr_replaced = replace_brackets_content(expr)
+    result = get_float(expr)
+    if result is not None:
+        return result
+    result = get_subject(expr, constants)
+    if result is not None:
+        return result
+
+    operator_idx = min_weight_slice(expr_replaced, operators)
+    if operator_idx:
+        left, op, right = expr[:operator_idx[0]], expr[operator_idx[0]: operator_idx[1]], expr[operator_idx[1]:]
+        op = get_subject(op, operators)
+        if (left != '') and (right != ''):
+            return op.execute(execute(left), execute(right))
+        elif right and left == '':
+            if op.unary:
+                return op.unary(execute(right))
             else:
-                break
-        if number:
-            num_len = len(number)
-            number = float(number)
-            return number, num_len
-        return None, 0
+                raise SyntaxError('03')
+        else:
+            raise SyntaxError('01')
 
-    def const_scissor(self, shift):
-        # Todo: Docstring, unittests
-        expr = self._expr[shift:]
-        for const in self._consts:
-            if expr.startswith(const.name):
-                return const.value, len(const.name)
-        return None, 0
+    function_idx = min_weight_slice(expr_replaced, functions)
+    if function_idx:
+        func, right = expr[function_idx[0]: function_idx[1]], expr[function_idx[1]:]
+        func = get_subject(func, functions)
+        if right != '':
+            return func.execute(execute(right))
+        else:
+            return func.execute()
 
-    def bracket_scissor(self, shift):
-        # Todo: Docstring, unittests
-        expr = self._expr[shift:]
-        if expr[0] == self._bracket_left:
-            self._bracket_level += 1
-            return Bracket('left', self._bracket_level), len(self._bracket_left)
-        if expr[0] == self._bracket_right:
-            res = Bracket('right', self._bracket_level), len(self._bracket_left)
-            self._bracket_level -= 1
-            return res
-        return None, 0
-
-    def func_scissor(self, shift):
-        # Todo: Docstring, unittests
-        expr = self._expr[shift:]
-        for func in self._funcs:
-            if expr.startswith(func.name):
-                return func, len(func.name)
-        return None, 0
-
-    def operator_scissor(self, shift):
-        # Todo: Docstring, unittests
-        expr = self._expr[shift:]
-        for operator in self._ops:
-            if expr.startswith(operator.name):
-                return operator, len(operator.name)
-        return None, 0
-
-    def render_expr(self):
-        # Todo: Docstring, unittests
-        result = []
-        expr_len = len(self._expr)
-        shift_count = 0
-        prev_shift_count = 0
-        while shift_count < expr_len:
-            for scissor in self._scissors:
-                if shift_count == expr_len:
-                    break
-                res, shift = scissor(self, shift_count)
-                if shift > 0:
-                    shift_count += shift
-                    result.append(res)
-            if shift_count == prev_shift_count:
-                print('error')  # Todo: Exception
-                return
-            prev_shift_count = shift_count
-        self._rendered_expr = result
+    raise SyntaxError('02')
 
 
 if __name__ == '__main__':
-    from pprint import pprint
-    e = Expression('(sin(213+34.5) - round(32.3))^2*0')
-    e.render_expr()
-    pprint(e._rendered_expr)
+    print(execute('(sin(213+34.5)-round(32.3))^2'))

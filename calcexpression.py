@@ -132,7 +132,7 @@ def execute(expr, bracket_left='(', bracket_right=')', operators=OPERATORS, call
         return result
     result = get_subject(expr, constants)
     if result is not None:
-        return result
+        return result.value
 
     operator_idx = min_weight_slice(expr_replaced, operators)
     if operator_idx:

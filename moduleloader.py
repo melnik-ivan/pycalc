@@ -3,47 +3,52 @@ from calcexpression import Callable, Constant
 
 class ModuleLoader:
     def __init__(self, module, callable_constructor=Callable, constant_constructor=Constant):
-        self.callable_constructor = callable_constructor
-        self.constant_constructor = constant_constructor
-        self.module = None
-        self.name_space = set()
+        self._callable_constructor = callable_constructor
+        self._constant_constructor = constant_constructor
+        self._callable_objects = []
+        self._constants = []
+        self._module = None
         self.load_module(module)
 
     def load_module(self, module):
-        self.module = __import__(module)
-        self.name_space = set(filter(lambda x: not x.startswith('_'), dir(self.module)))
-
-    def __getitem__(self, item):
-        if item not in self.name_space:
-            raise KeyError
-        else:
-            res = self.module.__dict__[item]
-            if callable(res):
-                return self.callable_constructor(item, res)
+        self._module = __import__(module)
+        for k, v in self._module.__dict__.items():
+            if callable(v):
+                self._callable_objects.append(self._callable_constructor(k, v))
             else:
-                return self.constant_constructor(item, res)
+                self._constants.append(self._constant_constructor(k, v))
+
+    def get_constants(self):
+        return list(self._constants)
+
+    def get_callable_objects(self):
+        return list(self._callable_objects)
 
 
 class ModulesScope:
     def __init__(self, modules, module_loader=ModuleLoader):
-        self.modules = [module_loader(m) for m in modules]
-        self.name_space = set()
-        for mod in self.modules:
-            self.name_space.update(mod.name_space)
+        self._modules = [module_loader(m) for m in modules]
+        self._constants = []
+        self._callable_objects = []
+        self.gen_scope()
 
-    def __getitem__(self, item):
-        if item not in self.name_space:
-            raise KeyError
-        else:
-            for m in self.modules:
-                try:
-                    return m[item]
-                except KeyError:
-                    pass
-            raise KeyError
+    def gen_scope(self):
+        for module in reversed(self._modules):
+            for cst in module.get_constants():
+                if cst not in self._constants:
+                    self._constants.append(cst)
+            for clb in module.get_callable_objects():
+                if clb not in self._callable_objects:
+                    self._callable_objects.append(clb)
+
+    def get_constants(self):
+        return list(self._constants)
+
+    def get_callable_objects(self):
+        return list(self._callable_objects)
 
 
 if __name__ == '__main__':
-    m = ModulesScope(('math', 'sys'))
-    print(m['pi'])
-    print(m['argv'])
+    m = ModulesScope(('math', 'sys', 'builtins'))
+    print(m.get_constants())
+

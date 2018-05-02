@@ -165,5 +165,10 @@ def execute(expr, bracket_left='(', bracket_right=')', operators=OPERATORS, call
 
 
 if __name__ == '__main__':
-    print(execute('(sin(213+34.5)-round(32.3))^2'))
-    print(execute('25%4'))
+    from moduleloader import ModulesScope
+    m = ModulesScope(('math', 'builtins'))
+    constants = m.get_constants()
+    callable_objects = m.get_callable_objects()
+
+    print(execute('(sin(213+34.5)-round(32.3))^2', callable_objects=callable_objects, constants=constants))
+    print(execute('25%4', callable_objects=callable_objects, constants=constants))

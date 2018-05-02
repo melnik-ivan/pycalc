@@ -69,7 +69,7 @@ def have_external_brackets(expr, bracket_left='(', bracket_right=')'):
 
 
 def cut_out_external_brackets(expr, bracket_left='(', bracket_right=')'):
-    if have_external_brackets(expr, bracket_left=bracket_left, bracket_right=bracket_right):
+    while have_external_brackets(expr, bracket_left=bracket_left, bracket_right=bracket_right):
         expr = expr[1:-1]
     return expr
 

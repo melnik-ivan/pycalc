@@ -2,7 +2,7 @@ from operator import add, sub, mul, truediv, floordiv, mod, pow, lt, le, eq, ne,
 from collections import namedtuple
 from math import sin, pi
 
-Func = namedtuple('Func', 'pattern execute weight')
+Callable = namedtuple('Callable', 'pattern execute')
 Operator = namedtuple('Operator', 'pattern execute weight unary')
 Constant = namedtuple('Constant', 'pattern value')
 Bracket = namedtuple('Bracket', 'side level')
@@ -25,28 +25,28 @@ CONSTANTS = [
     Constant('pi', pi)
 ]
 
-FUNCTIONS = [
-    Func('sin', sin, 16),
-    Func('abs', abs, 15),
-    Func('pow', pow, 14),
-    Func('round', round, 13),
+CALLABLE_OBJECTS = [
+    Callable('sin', sin),
+    Callable('abs', abs),
+    Callable('pow', pow),
+    Callable('round', round),
 ]
 
 OPERATORS = [
     Operator(',', comma_operator, 13, None),
     Operator('^', pow, 12, None),
     Operator('*', mul, 11, None),
-    Operator('//', floordiv, 10, None),
-    Operator('/', truediv, 9, None),
+    Operator('//', floordiv, 9, None),
+    Operator('/', truediv, 10, None),
     Operator('%', mod, 8, None),
     Operator('+', add, 7, lambda x: 0 + x),
     Operator('-', sub, 6, lambda x: 0 - x),
-    Operator('<=', le, 5, None),
-    Operator('<', lt, 4, None),
+    Operator('<=', le, 4, None),
+    Operator('<', lt, 5, None),
     Operator('==', eq, 3, None),
     Operator('!=', ne, 2, None),
-    Operator('>=', ge, 1, None),
-    Operator('>', gt, 0, None),
+    Operator('>=', ge, 0, None),
+    Operator('>', gt, 1, None),
 ]
 
 OPERATORS.sort(key=lambda op: op.weight)
@@ -124,7 +124,7 @@ def get_number(pattern):
     return None
 
 
-def execute(expr, bracket_left='(', bracket_right=')', operators=OPERATORS, functions=FUNCTIONS, constants=CONSTANTS):
+def execute(expr, bracket_left='(', bracket_right=')', operators=OPERATORS, callable_objects=CALLABLE_OBJECTS, constants=CONSTANTS):
     expr = cut_out_external_brackets(expr)
     expr_replaced = replace_brackets_content(expr)
     result = get_number(expr)
@@ -148,22 +148,22 @@ def execute(expr, bracket_left='(', bracket_right=')', operators=OPERATORS, func
         else:
             raise SyntaxError('01')
 
-    function_idx = min_weight_slice(expr_replaced, functions)
-    if function_idx:
-        func, right = expr[function_idx[0]: function_idx[1]], expr[function_idx[1]:]
-        func = get_subject(func, functions)
+    callable_idx = min_weight_slice(expr_replaced, callable_objects)
+    if callable_idx:
+        clb, right = expr[callable_idx[0]: callable_idx[1]], expr[callable_idx[1]:]
+        clb = get_subject(clb, callable_objects)
         if right != '':
             res = execute(right)
             if type(res) is tuple:
-                return func.execute(*res)
+                return clb.execute(*res)
             else:
-                return func.execute(res)
+                return clb.execute(res)
         else:
-            return func.execute()
+            return clb.execute()
 
     raise SyntaxError('02')
 
 
 if __name__ == '__main__':
     print(execute('(sin(213+34.5)-round(32.3))^2'))
-    print(execute('round(1.012,2)'))
+    print(execute('25%4'))

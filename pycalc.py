@@ -11,12 +11,12 @@ if __name__ == '__main__':
     parser.add_argument('EXPRESSION', help='expression string to evaluate')
     parser.add_argument('-m', '--use-modules', nargs='+', help='additional modules to use')
     args = parser.parse_args()
-    # print(args.EXPRESSION, args.use_modules)
     if args.use_modules:
         modules += args.use_modules
     modules_scope = ModulesScope(modules)
+    expression = ''.join(args.EXPRESSION.split())
     result = execute(
-        args.EXPRESSION,
+        expression,
         callable_objects=modules_scope.get_callable_objects(),
         constants=modules_scope.get_constants()
     )

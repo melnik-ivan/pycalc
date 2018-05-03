@@ -139,10 +139,36 @@ def execute(expr, bracket_left='(', bracket_right=')', operators=OPERATORS, call
         left, op, right = expr[:operator_idx[0]], expr[operator_idx[0]: operator_idx[1]], expr[operator_idx[1]:]
         op = get_subject(op, operators)
         if (left != '') and (right != ''):
-            return op.execute(execute(left), execute(right))
+            return op.execute(
+                execute(
+                    left,
+                    bracket_left=bracket_left,
+                    bracket_right=bracket_right,
+                    operators=operators,
+                    callable_objects=callable_objects,
+                    constants=constants
+                ),
+                execute(
+                    right,
+                    bracket_left=bracket_left,
+                    bracket_right=bracket_right,
+                    operators=operators,
+                    callable_objects=callable_objects,
+                    constants=constants
+                )
+            )
         elif right and left == '':
             if op.unary:
-                return op.unary(execute(right))
+                return op.unary(
+                    execute(
+                        right,
+                        bracket_left=bracket_left,
+                        bracket_right=bracket_right,
+                        operators=operators,
+                        callable_objects=callable_objects,
+                        constants=constants
+                    )
+                )
             else:
                 raise SyntaxError('03')
         else:
@@ -153,7 +179,14 @@ def execute(expr, bracket_left='(', bracket_right=')', operators=OPERATORS, call
         clb, right = expr[callable_idx[0]: callable_idx[1]], expr[callable_idx[1]:]
         clb = get_subject(clb, callable_objects)
         if right != '':
-            res = execute(right)
+            res = execute(
+                right,
+                bracket_left=bracket_left,
+                bracket_right=bracket_right,
+                operators=operators,
+                callable_objects=callable_objects,
+                constants=constants
+            )
             if type(res) is tuple:
                 return clb.execute(*res)
             else:

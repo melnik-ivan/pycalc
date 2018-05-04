@@ -39,8 +39,8 @@ OPERATORS = [
     Operator('//', floordiv, 9, None),
     Operator('/', truediv, 10, None),
     Operator('%', mod, 8, None),
-    Operator('+', add, 7, lambda x: 0 + x),
-    Operator('-', sub, 6, lambda x: 0 - x),
+    Operator('+', add, 6, lambda x: 0 + x),
+    Operator('-', sub, 7, lambda x: 0 - x),
     Operator('<=', le, 4, None),
     Operator('<', lt, 5, None),
     Operator('==', eq, 3, None),
@@ -51,150 +51,158 @@ OPERATORS = [
 
 OPERATORS.sort(key=lambda op: op.weight)
 
-# Todo: brackets validator
 
+class Expression:
+    def __init__(self, expr, bracket_left='(', bracket_right=')', brackets_content_placeholder='#', operators=OPERATORS,
+                 callable_objects=CALLABLE_OBJECTS, constants=CONSTANTS):
 
-def have_external_brackets(expr, bracket_left='(', bracket_right=')'):
-    if not (expr.startswith(bracket_left) and expr.endswith(bracket_right)):
-        return False
-    brackets_level = 0
-    for sym in expr[:-1]:
-        if sym == bracket_left:
-            brackets_level += 1
-        elif sym == bracket_right:
-            brackets_level -= 1
-            if brackets_level == 0:
-                return False
-    return True
+        self._expr = ''.join(expr.split())
+        self.validate()
+        self._collapse_signs()
+        self._bracket_left = bracket_left
+        self._bracket_right = bracket_right
+        self._brackets_content_placeholder = brackets_content_placeholder
+        self._operators = sorted(operators, key=lambda x: x.weight)
+        self._callable_objects = callable_objects
+        self._constants = constants
 
+    def execute(self):
+        return self._execute(self._expr)
 
-def cut_out_external_brackets(expr, bracket_left='(', bracket_right=')'):
-    while have_external_brackets(expr, bracket_left=bracket_left, bracket_right=bracket_right):
-        expr = expr[1:-1]
-    return expr
+    def _execute(self, expr):
+        expr = self._cut_out_external_brackets(expr)
+        expr_replaced = self._replace_brackets_content(expr)
+        result = self._get_number(expr)
+        if result is not None:
+            return result
+        result = self._get_constant(expr)
+        if result is not None:
+            return result.value
 
+        operator_idx = self._get_min_weight_operator_slice(expr_replaced)
+        if operator_idx:
+            left, op, right = expr[:operator_idx[0]], expr[operator_idx[0]: operator_idx[1]], expr[operator_idx[1]:]
+            op = self._get_operator(op)
+            if (left != '') and (right != ''):
+                return op.execute(self._execute(left), self._execute(right))
+            elif right and left == '':
+                if op.unary:
+                    return op.unary(self._execute(right))
+                else:
+                    raise SyntaxError('03')
+            else:
+                raise SyntaxError('01')
 
-def replace_brackets_content(expr, placeholder='@', bracket_left='(', bracket_right=')'):
-    result = []
-    brackets_level = 0
-    for sym in expr:
-        if sym == bracket_left:
-            brackets_level += 1
-            result.append(placeholder)
-        elif sym == bracket_right:
-            brackets_level -= 1
-            result.append(placeholder)
-        elif brackets_level > 0:
-            result.append(placeholder)
-        elif brackets_level == 0:
-            result.append(sym)
-        else:
-            raise SyntaxError('invalid brackets structure')
-    return ''.join(result)
+        callable_idx = self._get_callable_slice(expr_replaced)
+        if callable_idx:
+            clb, right = expr[callable_idx[0]: callable_idx[1]], expr[callable_idx[1]:]
+            clb = self._get_callable(clb)
+            if right != '':
+                res = self._execute(right)
+                if type(res) is tuple:
+                    return clb.execute(*res)
+                else:
+                    return clb.execute(res)
+            else:
+                return clb.execute()
 
+        raise SyntaxError('02')
 
-def min_weight_slice(expr, subjects, _sorted=True):
-    if not _sorted:
-        subjects = sorted(subjects, key=lambda x: x.weight)
-    for subject in subjects:
-        if subject.pattern in expr:
-            idx0 = expr.find(subject.pattern)
-            idx1 = idx0 + len(subject.pattern)
-            return idx0, idx1
-    return None
+    def _collapse_signs(self):
+        prev_len = len(self._expr)
+        while True:
+            self._expr = self._expr.replace('--', '+')
+            self._expr = self._expr.replace('-+', '-')
+            self._expr = self._expr.replace('+-', '-')
+            self._expr = self._expr.replace('++', '+')
+            current_len = len(self._expr)
+            if current_len == prev_len:
+                break
+            else:
+                prev_len = current_len
 
-
-def get_subject(pattern, subjects):
-    for subject in subjects:
-        if subject.pattern == pattern:
-            return subject
-    return None
-
-
-def get_number(pattern):
-    try:
-        return int(pattern)
-    except ValueError:
+    def validate(self):
+        # Todo: validators
         pass
 
-    try:
-        return float(pattern)
-    except ValueError:
-        pass
-    return None
+    def _cut_out_external_brackets(self, expr):
+        while self._have_external_brackets(expr):
+            expr = expr[1:-1]
+        return expr
 
+    def _have_external_brackets(self, expr):
+        if not (expr.startswith(self._bracket_left) and expr.endswith(self._bracket_right)):
+            return False
+        brackets_level = 0
+        for sym in expr[:-1]:
+            if sym == self._bracket_left:
+                brackets_level += 1
+            elif sym == self._bracket_right:
+                brackets_level -= 1
+                if brackets_level == 0:
+                    return False
+        return True
 
-def execute(expr, bracket_left='(', bracket_right=')', operators=OPERATORS, callable_objects=CALLABLE_OBJECTS, constants=CONSTANTS):
-    expr = cut_out_external_brackets(expr)
-    expr_replaced = replace_brackets_content(expr)
-    result = get_number(expr)
-    if result is not None:
-        return result
-    result = get_subject(expr, constants)
-    if result is not None:
-        return result.value
-
-    operator_idx = min_weight_slice(expr_replaced, operators)
-    if operator_idx:
-        left, op, right = expr[:operator_idx[0]], expr[operator_idx[0]: operator_idx[1]], expr[operator_idx[1]:]
-        op = get_subject(op, operators)
-        if (left != '') and (right != ''):
-            return op.execute(
-                execute(
-                    left,
-                    bracket_left=bracket_left,
-                    bracket_right=bracket_right,
-                    operators=operators,
-                    callable_objects=callable_objects,
-                    constants=constants
-                ),
-                execute(
-                    right,
-                    bracket_left=bracket_left,
-                    bracket_right=bracket_right,
-                    operators=operators,
-                    callable_objects=callable_objects,
-                    constants=constants
-                )
-            )
-        elif right and left == '':
-            if op.unary:
-                return op.unary(
-                    execute(
-                        right,
-                        bracket_left=bracket_left,
-                        bracket_right=bracket_right,
-                        operators=operators,
-                        callable_objects=callable_objects,
-                        constants=constants
-                    )
-                )
+    def _replace_brackets_content(self, expr):
+        result = []
+        brackets_level = 0
+        for sym in expr:
+            if sym == self._bracket_left:
+                brackets_level += 1
+                result.append(self._brackets_content_placeholder)
+            elif sym == self._bracket_right:
+                brackets_level -= 1
+                result.append(self._brackets_content_placeholder)
+            elif brackets_level > 0:
+                result.append(self._brackets_content_placeholder)
+            elif brackets_level == 0:
+                result.append(sym)
             else:
-                raise SyntaxError('03')
-        else:
-            raise SyntaxError('01')
+                raise SyntaxError('invalid brackets structure')
+        return ''.join(result)
 
-    callable_idx = min_weight_slice(expr_replaced, callable_objects)
-    if callable_idx:
-        clb, right = expr[callable_idx[0]: callable_idx[1]], expr[callable_idx[1]:]
-        clb = get_subject(clb, callable_objects)
-        if right != '':
-            res = execute(
-                right,
-                bracket_left=bracket_left,
-                bracket_right=bracket_right,
-                operators=operators,
-                callable_objects=callable_objects,
-                constants=constants
-            )
-            if type(res) is tuple:
-                return clb.execute(*res)
-            else:
-                return clb.execute(res)
-        else:
-            return clb.execute()
+    def _get_min_weight_operator_slice(self, expr):
+        for op in self._operators:
+            if op.pattern in expr:
+                idx0 = expr.find(op.pattern)
+                idx1 = idx0 + len(op.pattern)
+                return idx0, idx1
+        return None
 
-    raise SyntaxError('02')
+    def _get_callable_slice(self, expr):
+        for clb in self._callable_objects:
+            if clb.pattern in expr:
+                idx0 = expr.find(clb.pattern)
+                idx1 = idx0 + len(clb.pattern)
+                return idx0, idx1
+        return None
+
+    def _get_object(self, pattern, objects):
+        for obj in objects:
+            if obj.pattern == pattern:
+                return obj
+        return None
+
+    def _get_operator(self, pattern):
+        return self._get_object(pattern, self._operators)
+
+    def _get_callable(self, pattern):
+        return self._get_object(pattern, self._callable_objects)
+
+    def _get_constant(self, pattern):
+        return self._get_object(pattern, self._constants)
+
+    def _get_number(self, pattern):
+        try:
+            return int(pattern)
+        except ValueError:
+            pass
+
+        try:
+            return float(pattern)
+        except ValueError:
+            pass
+        return None
 
 
 if __name__ == '__main__':
@@ -203,4 +211,4 @@ if __name__ == '__main__':
     constants = m.get_constants()
     callable_objects = m.get_callable_objects()
 
-    print(execute('round(pi*2, 3)', callable_objects=callable_objects, constants=constants))
+    print(Expression('round(pi*2, 3)', callable_objects=callable_objects, constants=constants).execute())

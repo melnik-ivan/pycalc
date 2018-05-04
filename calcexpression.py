@@ -58,7 +58,6 @@ class Expression:
 
         self._expr = ''.join(expr.split())
         self.validate()
-        self._collapse_signs()
         self._bracket_left = bracket_left
         self._bracket_right = bracket_right
         self._brackets_content_placeholder = brackets_content_placeholder
@@ -108,19 +107,6 @@ class Expression:
 
         raise SyntaxError('02')
 
-    def _collapse_signs(self):
-        prev_len = len(self._expr)
-        while True:
-            self._expr = self._expr.replace('--', '+')
-            self._expr = self._expr.replace('-+', '-')
-            self._expr = self._expr.replace('+-', '-')
-            self._expr = self._expr.replace('++', '+')
-            current_len = len(self._expr)
-            if current_len == prev_len:
-                break
-            else:
-                prev_len = current_len
-
     def validate(self):
         # Todo: validators
         pass
@@ -166,7 +152,8 @@ class Expression:
             if op.pattern in expr:
                 idx0 = expr.find(op.pattern)
                 idx1 = idx0 + len(op.pattern)
-                return idx0, idx1
+                if not self._endswith_operator(expr[:idx0]):
+                    return idx0, idx1
         return None
 
     def _get_callable_slice(self, expr):
@@ -203,6 +190,12 @@ class Expression:
         except ValueError:
             pass
         return None
+
+    def _endswith_operator(self, expr):
+        for op in self._operators:
+            if expr.endswith(op.pattern):
+                return True
+        return False
 
 
 if __name__ == '__main__':

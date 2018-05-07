@@ -39,8 +39,8 @@ OPERATORS = [
     Operator('//', floordiv, 9, None),
     Operator('/', truediv, 10, None),
     Operator('%', mod, 8, None),
-    Operator('+', add, 6, lambda x: 0 + x),
-    Operator('-', sub, 7, lambda x: 0 - x),
+    Operator('+', add, 6, lambda x: x),
+    Operator('-', sub, 7, lambda x: -x),
     Operator('<=', le, 4, None),
     Operator('<', lt, 5, None),
     Operator('==', eq, 3, None),
@@ -241,7 +241,7 @@ if __name__ == '__main__':
     constants = m.get_constants()
     callable_objects = m.get_callable_objects()
 
-    expr = 'round(2-+--2, 2)'
+    expr = '(2+2)*2-(2-4)*2'
     print('my_e', Expression(expr, callable_objects=callable_objects, constants=constants).execute())
-    expr = 'round(2-+--2, 2)'
+    expr = '(2+2)*2-(2-4)*2'
     print('eval', eval(expr))

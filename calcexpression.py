@@ -56,7 +56,8 @@ class Expression:
     def __init__(self, expr, bracket_left='(', bracket_right=')', brackets_content_placeholder='#', operators=OPERATORS,
                  callable_objects=CALLABLE_OBJECTS, constants=CONSTANTS):
 
-        self._expr = ''.join(expr.split())
+        self._expr = expr
+        self._preprocessing()
         self.validate()
         self._bracket_left = bracket_left
         self._bracket_right = bracket_right
@@ -64,6 +65,9 @@ class Expression:
         self._operators = sorted(operators, key=lambda x: x.weight)
         self._callable_objects = callable_objects
         self._constants = constants
+
+    def _preprocessing(self):
+        self._expr = ''.join(self._expr.split())
 
     def execute(self):
         return self._execute(self._expr)
@@ -170,13 +174,18 @@ class Expression:
         return None
 
     def _get_min_weight_unary_operator(self, expr):
+        min_idxs = None
         for op in self._operators:
             if op.pattern in expr:
                 idx0 = expr.find(op.pattern)
                 idx1 = idx0 + len(op.pattern)
                 if self._operator_is_unary(expr, idx0):
-                    return idx0, idx1
-        return None
+                    if min_idxs and min_idxs[0] > idx0:
+                        min_idxs = idx0, idx1
+                    if not min_idxs:
+                        min_idxs = idx0, idx1
+        return min_idxs
+
 
     def _get_callable_slice(self, expr):
         for clb in self._callable_objects:
@@ -232,4 +241,7 @@ if __name__ == '__main__':
     constants = m.get_constants()
     callable_objects = m.get_callable_objects()
 
-    print(Expression('2^-(-2)', callable_objects=callable_objects, constants=constants).execute())
+    expr = 'round(2-+--2, 2)'
+    print('my_e', Expression(expr, callable_objects=callable_objects, constants=constants).execute())
+    expr = 'round(2-+--2, 2)'
+    print('eval', eval(expr))

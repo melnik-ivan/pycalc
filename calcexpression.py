@@ -162,12 +162,11 @@ class Expression:
     def _get_min_weight_binary_operator(self, expr):
         for op in self._operators:
             if op.pattern in expr:
-                idx1 = -1
+                idx0 = -1
                 while True:
-                    idx0 = expr[idx1+1:].find(op.pattern)
+                    idx0 = expr[:idx0].rfind(op.pattern)
                     if idx0 < 0:
                         break
-                    idx0 += idx1 + 1
                     idx1 = idx0 + len(op.pattern)
                     if not self._operator_is_unary(expr, idx0):
                         return idx0, idx1
@@ -241,7 +240,7 @@ if __name__ == '__main__':
     constants = m.get_constants()
     callable_objects = m.get_callable_objects()
 
-    expr = '(2+2)*2-(2-4)*2'
+    expr = '4-2-+-2'
     print('my_e', Expression(expr, callable_objects=callable_objects, constants=constants).execute())
-    expr = '(2+2)*2-(2-4)*2'
+    expr = '4-2-+-2'
     print('eval', eval(expr))

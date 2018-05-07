@@ -78,17 +78,12 @@ class Expression:
         if result is not None:
             return result.value
 
-        operator_idx = self._get_min_weight_operator_slice(expr_replaced)
+        operator_idx = self._get_min_weight_binary_operator(expr_replaced)
         if operator_idx:
             left, op, right = expr[:operator_idx[0]], expr[operator_idx[0]: operator_idx[1]], expr[operator_idx[1]:]
             op = self._get_operator(op)
             if (left != '') and (right != ''):
                 return op.execute(self._execute(left), self._execute(right))
-            elif right and left == '':
-                if op.unary:
-                    return op.unary(self._execute(right))
-                else:
-                    raise SyntaxError('03')
             else:
                 raise SyntaxError('01')
 
@@ -104,6 +99,16 @@ class Expression:
                     return clb.execute(res)
             else:
                 return clb.execute()
+
+        unary_idx = self._get_min_weight_unary_operator(expr_replaced)
+        if unary_idx:
+            left, op, right = expr[:unary_idx[0]], expr[unary_idx[0]: unary_idx[1]], expr[unary_idx[1]:]
+            op = self._get_operator(op)
+            if right and left == '':
+                if op.unary:
+                    return op.unary(self._execute(right))
+                else:
+                    raise SyntaxError('03')
 
         raise SyntaxError('02')
 
@@ -147,12 +152,29 @@ class Expression:
                 raise SyntaxError('invalid brackets structure')
         return ''.join(result)
 
-    def _get_min_weight_operator_slice(self, expr):
+    def _operator_is_unary(self, expr, idx0):
+        return bool(not expr[:idx0] or expr[:idx0].endswith(self._bracket_left) or self._endswith_operator(expr[:idx0]))
+
+    def _get_min_weight_binary_operator(self, expr):
+        for op in self._operators:
+            if op.pattern in expr:
+                idx1 = -1
+                while True:
+                    idx0 = expr[idx1+1:].find(op.pattern)
+                    if idx0 < 0:
+                        break
+                    idx0 += idx1 + 1
+                    idx1 = idx0 + len(op.pattern)
+                    if not self._operator_is_unary(expr, idx0):
+                        return idx0, idx1
+        return None
+
+    def _get_min_weight_unary_operator(self, expr):
         for op in self._operators:
             if op.pattern in expr:
                 idx0 = expr.find(op.pattern)
                 idx1 = idx0 + len(op.pattern)
-                if not self._endswith_operator(expr[:idx0]):
+                if self._operator_is_unary(expr, idx0):
                     return idx0, idx1
         return None
 
@@ -194,8 +216,14 @@ class Expression:
     def _endswith_operator(self, expr):
         for op in self._operators:
             if expr.endswith(op.pattern):
-                return True
-        return False
+                return op.pattern
+        return None
+
+    def _startswith_operator(self, expr):
+        for op in self._operators:
+            if expr.startswith(op.pattern):
+                return op.pattern
+        return None
 
 
 if __name__ == '__main__':
@@ -204,4 +232,4 @@ if __name__ == '__main__':
     constants = m.get_constants()
     callable_objects = m.get_callable_objects()
 
-    print(Expression('round(pi*2, 3)', callable_objects=callable_objects, constants=constants).execute())
+    print(Expression('2^-(-2)', callable_objects=callable_objects, constants=constants).execute())

@@ -1,10 +1,8 @@
 from operator import add, sub, mul, truediv, floordiv, mod, pow, lt, le, eq, ne, ge, gt
 from collections import namedtuple
-from math import sin, pi
+from moduleloader import built_ins
 
-Callable = namedtuple('Callable', 'pattern execute')
 Operator = namedtuple('Operator', 'pattern execute weight unary')
-Constant = namedtuple('Constant', 'pattern value')
 Bracket = namedtuple('Bracket', 'side level')
 
 
@@ -21,16 +19,9 @@ def comma_operator(left, right):
         raise TypeError
 
 
-CONSTANTS = [
-    Constant('pi', pi)
-]
+CONSTANTS = built_ins.get_constants()
 
-CALLABLE_OBJECTS = [
-    Callable('sin', sin),
-    Callable('abs', abs),
-    Callable('pow', pow),
-    Callable('round', round),
-]
+CALLABLE_OBJECTS = built_ins.get_callable_objects()
 
 OPERATORS = [
     Operator(',', comma_operator, -1, None),
@@ -185,7 +176,6 @@ class Expression:
                         min_idxs = idx0, idx1
         return min_idxs
 
-
     def _get_callable_slice(self, expr):
         for clb in self._callable_objects:
             if clb.pattern in expr:
@@ -232,15 +222,3 @@ class Expression:
             if expr.startswith(op.pattern):
                 return op.pattern
         return None
-
-
-if __name__ == '__main__':
-    from moduleloader import ModulesScope
-    m = ModulesScope(('math', 'builtins'))
-    constants = m.get_constants()
-    callable_objects = m.get_callable_objects()
-
-    expr = '4-2-+-2'
-    print('my_e', Expression(expr, callable_objects=callable_objects, constants=constants).execute())
-    expr = '4-2-+-2'
-    print('eval', eval(expr))

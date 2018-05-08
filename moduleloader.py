@@ -1,4 +1,7 @@
-from calcexpression import Callable, Constant
+from collections import namedtuple
+
+Callable = namedtuple('Callable', 'pattern execute')
+Constant = namedtuple('Constant', 'pattern value')
 
 
 class ModuleLoader:
@@ -46,6 +49,9 @@ class ModulesScope:
 
     def get_callable_objects(self):
         return list(self._callable_objects)
+
+
+built_ins = ModuleLoader('builtins')
 
 
 if __name__ == '__main__':

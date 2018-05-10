@@ -1,6 +1,5 @@
 import unittest
 from collections import namedtuple
-from math import sin
 
 from calcexpression import Expression, OPERATORS, CALLABLE_OBJECTS, CONSTANTS
 from moduleloader import ModulesScope
@@ -62,6 +61,7 @@ class TestExpressionMethods(unittest.TestCase):
             ('5>=4', True),
             ('-int(4.0)^2', eval('-int(4.0)**2')),
             ('-sin(2)^2', -0.826821810431806),
+            ('2^2^3', eval('2**2**3'))
         ]
         for arg, result in test_list:
             self.assertEqual(result, Expression('2+2', constants=self.scope.get_constants(),
@@ -163,15 +163,16 @@ class TestExpressionMethods(unittest.TestCase):
 
     def test_get_min_weight_binary_operator(self):
         test_list = [
-            ('2+-2', (1, 2)),
-            ('2-2-2', (3, 4)),
-            ('2==2-2', (1, 3)),
-            ('2==2', (1, 3)),
-            ('2*2+2^2', (3, 4)),
-            ('abracadabra', None),
+            ('2+-2', {}, (1, 2)),
+            ('2-2-2', {}, (3, 4)),
+            ('2==2-2', {}, (1, 3)),
+            ('2==2', {}, (1, 3)),
+            ('2*2+2^2', {}, (3, 4)),
+            ('abracadabra', {}, None),
+            ('2-3-2', {'revert': False}, (1, 2)),
         ]
-        for arg, result in test_list:
-            self.assertEqual(result, self.expr._get_min_weight_binary_operator(arg))
+        for arg, kwargs, result in test_list:
+            self.assertEqual(result, self.expr._get_min_weight_binary_operator(arg, **kwargs))
 
     def test_get_min_weight_unary_operator(self):
         test_list = [

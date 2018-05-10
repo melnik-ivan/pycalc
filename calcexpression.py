@@ -79,7 +79,8 @@ class Expression:
             (self._execute_binary_operator, (expr, expr_replaced), {'filter_': lambda x: x.pattern != '^'}),
             (self._execute_unary_operator, (expr, expr_replaced),
              {'filter_': lambda x: x.pattern == '-' or x.pattern == '+'}),
-            (self._execute_binary_operator, (expr, expr_replaced), {'filter_': lambda x: x.pattern == '^'}),
+            (self._execute_binary_operator, (expr, expr_replaced),
+             {'filter_': lambda x: x.pattern == '^', 'revert': False}),
             (self._execute_callable_object, (expr, expr_replaced), {}),
         ]
 
@@ -90,8 +91,8 @@ class Expression:
 
         raise SyntaxError('01')
 
-    def _execute_binary_operator(self, expr, expr_replaced, filter_=None):
-        operator_idx = self._get_min_weight_binary_operator(expr_replaced, filter_)
+    def _execute_binary_operator(self, expr, expr_replaced, filter_=None, revert=True):
+        operator_idx = self._get_min_weight_binary_operator(expr_replaced, filter_, revert)
         if operator_idx:
             left, op, right = expr[:operator_idx[0]], expr[operator_idx[0]: operator_idx[1]], expr[operator_idx[1]:]
             op = self._get_object(op, self._operators, filter_)
@@ -176,20 +177,29 @@ class Expression:
     def _operator_is_unary(self, expr, idx0):
         return bool(not expr[:idx0] or expr[:idx0].endswith(self._bracket_left) or self._endswith_operator(expr[:idx0]))
 
-    def _get_min_weight_binary_operator(self, expr, filter_=None):
+    def _get_min_weight_binary_operator(self, expr, filter_=None, revert=True):
         operators = self._operators
         if filter_:
             operators = filter(filter_, operators)
         for op in operators:
             if op.pattern in expr:
                 idx0 = -1
+                idx1 = 0
                 while True:
-                    idx0 = expr[:idx0].rfind(op.pattern)
-                    if idx0 < 0:
-                        break
-                    idx1 = idx0 + len(op.pattern)
-                    if not self._operator_is_unary(expr, idx0):
-                        return idx0, idx1
+                    if not revert:
+                        idx0 = expr[idx1:].find(op.pattern)
+                        if idx0 < 0:
+                            break
+                        idx1 = idx0 + len(op.pattern)
+                        if not self._operator_is_unary(expr, idx0):
+                            return idx0, idx1
+                    else:
+                        idx0 = expr[:idx0].rfind(op.pattern)
+                        if idx0 < 0:
+                            break
+                        idx1 = idx0 + len(op.pattern)
+                        if not self._operator_is_unary(expr, idx0):
+                            return idx0, idx1
         return None
 
     def _get_min_weight_unary_operator(self, expr, filter_=None):

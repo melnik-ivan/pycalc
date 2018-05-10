@@ -102,8 +102,7 @@ class Expression:
                 return True, op.execute(self._execute(left))
             else:
                 raise SyntaxError('02')
-        else:
-            return False, None
+        return False, None
 
     def _execute_unary_operator(self, expr, expr_replaced, filter_=None):
         unary_idx = self._get_min_weight_unary_operator(expr_replaced, filter_)
@@ -115,8 +114,7 @@ class Expression:
                     return True, op.unary(self._execute(right))
                 else:
                     raise SyntaxError('03')
-        else:
-            return False, None
+        return False, None
 
     def _execute_callable_object(self, expr, expr_replaced, filter_=None):
         callable_idx = self._get_callable_slice(expr_replaced, filter_)
@@ -131,8 +129,7 @@ class Expression:
                     return True, clb.execute(res)
             else:
                 return True, clb.execute()
-        else:
-            return False, None
+        return False, None
 
     def validate(self):
         # Todo: validators

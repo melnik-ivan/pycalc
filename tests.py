@@ -61,7 +61,9 @@ class TestExpressionMethods(unittest.TestCase):
             ('5>=4', True),
             ('-int(4.0)^2', eval('-int(4.0)**2')),
             ('-sin(2)^2', -0.826821810431806),
-            ('2^2^3', eval('2**2**3'))
+            ('2^2^3', eval('2**2**3')),
+            ('2^-3', eval('2**-3')),
+            ('-2^-3', eval('-2**-3')),
         ]
         for arg, result in test_list:
             self.assertEqual(result, Expression('2+2', constants=self.scope.get_constants(),

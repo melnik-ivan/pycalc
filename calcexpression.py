@@ -79,8 +79,8 @@ class Expression:
             (self._execute_binary_operator, (expr, expr_replaced), {'filter_': lambda x: x.pattern != '^'}),
             (self._execute_unary_operator, (expr, expr_replaced),
              {'filter_': lambda x: x.pattern == '-' or x.pattern == '+'}),
-            (self._execute_callable_object, (expr, expr_replaced), {}),
             (self._execute_binary_operator, (expr, expr_replaced), {'filter_': lambda x: x.pattern == '^'}),
+            (self._execute_callable_object, (expr, expr_replaced), {}),
         ]
 
         for func, args, kwargs in execute_list:

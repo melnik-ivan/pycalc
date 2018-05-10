@@ -1,16 +1,21 @@
 import unittest
 from collections import namedtuple
+from math import sin
 
 from calcexpression import Expression, OPERATORS, CALLABLE_OBJECTS, CONSTANTS
+from moduleloader import ModulesScope
 
 
 class TestExpressionMethods(unittest.TestCase):
 
     def setUp(self):
-        self.expr = Expression('2+2')
+        self.scope = ModulesScope('builtins', 'math')
+        self.expr = Expression('2+2', callable_objects=self.scope.get_callable_objects(),
+                               constants=self.scope.get_constants())
 
     def tearDown(self):
         del self.expr
+        del self.scope
 
     def test_init(self):
         arg = 'round(2*(- 5 +9^3), 2)'
@@ -55,9 +60,12 @@ class TestExpressionMethods(unittest.TestCase):
             ('5<4', False),
             ('5<=4', False),
             ('5>=4', True),
+            ('-int(4.0)^2', eval('-int(4.0)**2')),
+            ('-sin(2)^2', -0.826821810431806),
         ]
         for arg, result in test_list:
-            self.assertEqual(result, Expression('2+2')._execute(arg))
+            self.assertEqual(result, Expression('2+2', constants=self.scope.get_constants(),
+                                                callable_objects=self.scope.get_callable_objects())._execute(arg))
 
     def test_execute(self):
         test_list = [
@@ -80,8 +88,35 @@ class TestExpressionMethods(unittest.TestCase):
         for arg, result in test_list:
             self.assertEqual(result, Expression(arg).execute())
 
+    def test_execute_binary_operator(self):
+        test_list = [
+            (('2+2', '2+2', None), (True, 4)),
+            (('2+sin(4)', '2+sin' + self.expr._brackets_content_placeholder * 3, None), (True, 1.2431975046920718)),
+            (('2+2', '2+2', lambda x: x.pattern != '+'), (False, None)),
+        ]
+        for args, result in test_list:
+            self.assertEqual(result, self.expr._execute_binary_operator(*args))
+
+    def test_execute_unary_operator(self):
+        test_list = [
+            (('-2', '-2', None), (True, -2)),
+            (('+sin(4)', '+sin' + self.expr._brackets_content_placeholder * 3, None), (True, -0.7568024953079282)),
+            (('+2', '+2', lambda x: x.pattern != '+'), (False, None)),
+        ]
+        for args, result in test_list:
+            self.assertEqual(result, self.expr._execute_unary_operator(*args))
+
+    def test_execute_callable_object(self):
+        test_list = [
+            (('-2', '-2', None), (False, None)),
+            (('-sin(4)', '-sin' + self.expr._brackets_content_placeholder * 3, None), (True, -0.7568024953079282)),
+            (('sin(2)', 'sin' + self.expr._brackets_content_placeholder * 3, lambda x: x.pattern != 'sin'),
+             (False, None)),
+        ]
+        for args, result in test_list:
+            self.assertEqual(result, self.expr._execute_callable_object(*args))
+
     def test_cut_out_external_brackets(self):
-        _expr = '2+2'
         test_list = [
             ('()', ''),
             ('(-4)', '-4'),
@@ -89,10 +124,9 @@ class TestExpressionMethods(unittest.TestCase):
             ('(adsaf fdsa3248)(()())', '(adsaf fdsa3248)(()())'),
         ]
         for arg, result in test_list:
-            self.assertEqual(result, Expression(_expr)._cut_out_external_brackets(arg))
+            self.assertEqual(result, self.expr._cut_out_external_brackets(arg))
 
     def test_have_external_brackets(self):
-        _expr = '2+2'
         test_list = [
             ('()', True),
             ('(-4)', True),
@@ -100,7 +134,7 @@ class TestExpressionMethods(unittest.TestCase):
             ('(adsaf fdsa3248)(()())', False),
         ]
         for arg, result in test_list:
-            self.assertEqual(result, Expression(_expr)._have_external_brackets(arg))
+            self.assertEqual(result, self.expr._have_external_brackets(arg))
 
     def test_replace_brackets_content(self):
         test_list = [
@@ -174,6 +208,37 @@ class TestExpressionMethods(unittest.TestCase):
         ]
         for args, result in test_list:
             self.assertIs(result, self.expr._get_object(*args), 'args: {}'.format(args))
+
+    def test_get_number(self):
+        test_list = [
+            ('1.4', 1.4),
+            ('1', 1),
+            ('-3', -3),
+            ('a2', None),
+            ('0x10', None)
+        ]
+        for arg, result in test_list:
+            self.assertEqual(result, self.expr._get_number(arg))
+
+    def test_endswith_operator(self):
+        test_list = [
+            ('5==', '=='),
+            (')+-', '-'),
+            ('+sin(4)', None),
+            ('sin(4)-3', None),
+        ]
+        for arg, result in test_list:
+            self.assertEqual(result, self.expr._endswith_operator(arg))
+
+    def test_startswith_operator(self):
+        test_list = [
+            ('5-', None),
+            (')+-', None),
+            ('>=sin(4)', '>='),
+            ('//sin(4)-3', '//'),
+        ]
+        for arg, result in test_list:
+            self.assertEqual(result, self.expr._startswith_operator(arg))
 
 
 if __name__ == '__main__':

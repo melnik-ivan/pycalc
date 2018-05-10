@@ -15,7 +15,7 @@ if __name__ == '__main__':
         for m in args.use_modules:
             if m not in modules:
                 modules.append(m)
-    modules_scope = ModulesScope(modules)
+    modules_scope = ModulesScope(*modules)
     result = Expression(
         args.EXPRESSION,
         callable_objects=modules_scope.get_callable_objects(),

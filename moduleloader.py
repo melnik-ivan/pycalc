@@ -29,7 +29,7 @@ class ModuleLoader:
 
 
 class ModulesScope:
-    def __init__(self, modules, module_loader=ModuleLoader):
+    def __init__(self, *modules, module_loader=ModuleLoader):
         self._modules = [module_loader(m) for m in modules]
         self._constants = []
         self._callable_objects = []

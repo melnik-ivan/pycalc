@@ -66,57 +66,72 @@ class Expression:
     def _execute(self, expr):
         expr = self._cut_out_external_brackets(expr)
         expr_replaced = self._replace_brackets_content(expr)
+
         result = self._get_number(expr)
         if result is not None:
             return result
-        result = self._get_constant(expr)
+
+        result = self._get_object(expr, self._constants)
         if result is not None:
             return result.value
 
-        operator_idx = self._get_min_weight_binary_operator(expr_replaced, lambda x: x.pattern != '^')
+        execute_list = [
+            (self._execute_binary_operator, (expr, expr_replaced), {'filter_': lambda x: x.pattern != '^'}),
+            (self._execute_unary_operator, (expr, expr_replaced),
+             {'filter_': lambda x: x.pattern == '-' or x.pattern == '+'}),
+            (self._execute_callable_object, (expr, expr_replaced), {}),
+            (self._execute_binary_operator, (expr, expr_replaced), {'filter_': lambda x: x.pattern == '^'}),
+        ]
+
+        for func, args, kwargs in execute_list:
+            result = func(*args, **kwargs)
+            if result[0]:
+                return result[1]
+
+        raise SyntaxError('01')
+
+    def _execute_binary_operator(self, expr, expr_replaced, filter_=None):
+        operator_idx = self._get_min_weight_binary_operator(expr_replaced, filter_)
         if operator_idx:
             left, op, right = expr[:operator_idx[0]], expr[operator_idx[0]: operator_idx[1]], expr[operator_idx[1]:]
-            op = self._get_operator(op)
+            op = self._get_object(op, self._operators, filter_)
             if (left != '') and (right != ''):
-                return op.execute(self._execute(left), self._execute(right))
+                return True, op.execute(self._execute(left), self._execute(right))
             elif left != '' and right == '':
-                return op.execute(self._execute(left))
+                return True, op.execute(self._execute(left))
             else:
-                raise SyntaxError('01')
+                raise SyntaxError('02')
+        else:
+            return False, None
 
-        callable_idx = self._get_callable_slice(expr_replaced)
+    def _execute_unary_operator(self, expr, expr_replaced, filter_=None):
+        unary_idx = self._get_min_weight_unary_operator(expr_replaced, filter_)
+        if unary_idx:
+            left, op, right = expr[:unary_idx[0]], expr[unary_idx[0]: unary_idx[1]], expr[unary_idx[1]:]
+            op = self._get_object(op, self._operators, filter_)
+            if right and left == '':
+                if op.unary:
+                    return True, op.unary(self._execute(right))
+                else:
+                    raise SyntaxError('03')
+        else:
+            return False, None
+
+    def _execute_callable_object(self, expr, expr_replaced, filter_=None):
+        callable_idx = self._get_callable_slice(expr_replaced, filter_)
         if callable_idx:
             clb, right = expr[callable_idx[0]: callable_idx[1]], expr[callable_idx[1]:]
-            clb = self._get_callable(clb)
+            clb = self._get_object(clb, self._callable_objects, filter_)
             if right != '':
                 res = self._execute(right)
                 if type(res) is tuple:
-                    return clb.execute(*res)
+                    return True, clb.execute(*res)
                 else:
-                    return clb.execute(res)
+                    return True, clb.execute(res)
             else:
-                return clb.execute()
-
-        unary_idx = self._get_min_weight_unary_operator(expr_replaced)
-        if unary_idx:
-            left, op, right = expr[:unary_idx[0]], expr[unary_idx[0]: unary_idx[1]], expr[unary_idx[1]:]
-            op = self._get_operator(op)
-            if right and left == '':
-                if op.unary:
-                    return op.unary(self._execute(right))
-                else:
-                    raise SyntaxError('03')
-
-        operator_idx = self._get_min_weight_binary_operator(expr_replaced, lambda x: x.pattern == '^')
-        if operator_idx:
-            left, op, right = expr[:operator_idx[0]], expr[operator_idx[0]: operator_idx[1]], expr[operator_idx[1]:]
-            op = self._get_operator(op)
-            if (left != '') and (right != ''):
-                return op.execute(self._execute(left), self._execute(right))
-            else:
-                raise SyntaxError('04')
-
-        raise SyntaxError('02')
+                return True, clb.execute()
+        else:
+            return False, None
 
     def validate(self):
         # Todo: validators
@@ -161,10 +176,10 @@ class Expression:
     def _operator_is_unary(self, expr, idx0):
         return bool(not expr[:idx0] or expr[:idx0].endswith(self._bracket_left) or self._endswith_operator(expr[:idx0]))
 
-    def _get_min_weight_binary_operator(self, expr, fltr=None):
+    def _get_min_weight_binary_operator(self, expr, filter_=None):
         operators = self._operators
-        if fltr:
-            operators = filter(fltr, operators)
+        if filter_:
+            operators = filter(filter_, operators)
         for op in operators:
             if op.pattern in expr:
                 idx0 = -1
@@ -177,9 +192,12 @@ class Expression:
                         return idx0, idx1
         return None
 
-    def _get_min_weight_unary_operator(self, expr):
+    def _get_min_weight_unary_operator(self, expr, filter_=None):
+        operators = self._operators
+        if filter_:
+            operators = filter(filter_, operators)
         min_idxs = None
-        for op in self._operators:
+        for op in operators:
             if op.pattern in expr:
                 idx0 = expr.find(op.pattern)
                 idx1 = idx0 + len(op.pattern)
@@ -190,30 +208,28 @@ class Expression:
                         min_idxs = idx0, idx1
         return min_idxs
 
-    def _get_callable_slice(self, expr):
-        for clb in self._callable_objects:
+    def _get_callable_slice(self, expr, filter_=None):
+        callable_objects = self._callable_objects
+        if filter_:
+            callable_objects = filter(filter_, callable_objects)
+        for clb in callable_objects:
             if clb.pattern in expr:
                 idx0 = expr.find(clb.pattern)
                 idx1 = idx0 + len(clb.pattern)
                 return idx0, idx1
         return None
 
-    def _get_object(self, pattern, objects):
+    @staticmethod
+    def _get_object(pattern, objects, filter_=None):
+        if filter_:
+            objects = filter(filter_, objects)
         for obj in objects:
             if obj.pattern == pattern:
                 return obj
         return None
 
-    def _get_operator(self, pattern):
-        return self._get_object(pattern, self._operators)
-
-    def _get_callable(self, pattern):
-        return self._get_object(pattern, self._callable_objects)
-
-    def _get_constant(self, pattern):
-        return self._get_object(pattern, self._constants)
-
-    def _get_number(self, pattern):
+    @staticmethod
+    def _get_number(pattern):
         try:
             return int(pattern)
         except ValueError:

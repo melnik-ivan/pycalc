@@ -14,7 +14,7 @@ def comma_operator(left, right):
     elif type(left) is tuple:
         return left + (right,)
     elif type(right) is tuple:
-        return (left, ) + right
+        return (left,) + right
     else:
         raise TypeError
 
@@ -73,12 +73,14 @@ class Expression:
         if result is not None:
             return result.value
 
-        operator_idx = self._get_min_weight_binary_operator(expr_replaced)
+        operator_idx = self._get_min_weight_binary_operator(expr_replaced, lambda x: x.pattern != '^')
         if operator_idx:
             left, op, right = expr[:operator_idx[0]], expr[operator_idx[0]: operator_idx[1]], expr[operator_idx[1]:]
             op = self._get_operator(op)
             if (left != '') and (right != ''):
                 return op.execute(self._execute(left), self._execute(right))
+            elif left != '' and right == '':
+                return op.execute(self._execute(left))
             else:
                 raise SyntaxError('01')
 
@@ -104,6 +106,15 @@ class Expression:
                     return op.unary(self._execute(right))
                 else:
                     raise SyntaxError('03')
+
+        operator_idx = self._get_min_weight_binary_operator(expr_replaced, lambda x: x.pattern == '^')
+        if operator_idx:
+            left, op, right = expr[:operator_idx[0]], expr[operator_idx[0]: operator_idx[1]], expr[operator_idx[1]:]
+            op = self._get_operator(op)
+            if (left != '') and (right != ''):
+                return op.execute(self._execute(left), self._execute(right))
+            else:
+                raise SyntaxError('04')
 
         raise SyntaxError('02')
 
@@ -150,8 +161,11 @@ class Expression:
     def _operator_is_unary(self, expr, idx0):
         return bool(not expr[:idx0] or expr[:idx0].endswith(self._bracket_left) or self._endswith_operator(expr[:idx0]))
 
-    def _get_min_weight_binary_operator(self, expr):
-        for op in self._operators:
+    def _get_min_weight_binary_operator(self, expr, fltr=None):
+        operators = self._operators
+        if fltr:
+            operators = filter(fltr, operators)
+        for op in operators:
             if op.pattern in expr:
                 idx0 = -1
                 while True:

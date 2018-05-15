@@ -1,6 +1,7 @@
 from operator import add, sub, mul, truediv, floordiv, mod, pow, lt, le, eq, ne, ge, gt
 from collections import namedtuple
 from moduleloader import built_ins
+import re
 
 Operator = namedtuple('Operator', 'pattern execute weight unary')
 Bracket = namedtuple('Bracket', 'side level')
@@ -46,12 +47,11 @@ OPERATORS.sort(key=lambda op: op.weight)
 class Expression:
     def __init__(self, expr, bracket_left='(', bracket_right=')', brackets_content_placeholder='#', operators=OPERATORS,
                  callable_objects=CALLABLE_OBJECTS, constants=CONSTANTS):
-
+        self._bracket_left = bracket_left
+        self._bracket_right = bracket_right
         self._expr = expr
         self._preprocessing()
         self.validate()
-        self._bracket_left = bracket_left
-        self._bracket_right = bracket_right
         self._brackets_content_placeholder = brackets_content_placeholder
         self._operators = sorted(operators, key=lambda x: x.weight)
         self._callable_objects = callable_objects
@@ -59,6 +59,7 @@ class Expression:
 
     def _preprocessing(self):
         self._expr = ''.join(self._expr.split())
+        self._uncover_multiplication()
 
     def execute(self):
         return self._execute(self._expr)
@@ -119,7 +120,9 @@ class Expression:
     def _execute_callable_object(self, expr, expr_replaced, filter_=None):
         callable_idx = self._get_callable_slice(expr_replaced, filter_)
         if callable_idx:
-            clb, right = expr[callable_idx[0]: callable_idx[1]], expr[callable_idx[1]:]
+            left, clb, right = expr[:callable_idx[0]], expr[callable_idx[0]: callable_idx[1]], expr[callable_idx[1]:]
+            if left and not self._get_min_weight_unary_operator(left):
+                raise SyntaxError('04')
             clb = self._get_object(clb, self._callable_objects, filter_)
             if right != '':
                 res = self._execute(right)
@@ -259,3 +262,24 @@ class Expression:
             if expr.startswith(op.pattern):
                 return op.pattern
         return None
+
+    def _uncover_multiplication(self):
+        rx1 = r'[\W](\d*\.?\d+?\{})'
+        rx2 = r'^(\d*\.?\d+?\{})'
+
+        for rx in rx1, rx2:
+            bracket = self._bracket_left
+            match_list = re.findall(rx.format(bracket), self._expr)
+            for match in match_list:
+                replacer = ''.join((match[:-1], '*', match[-1]))
+                self._expr = self._expr.replace(match, replacer)
+
+            reversed_expr = self._expr[::-1]
+
+            bracket = self._bracket_right
+            match_list = re.findall(rx.format(bracket), reversed_expr)
+            for match in match_list:
+                replacer = ''.join((match[:-1], '*', match[-1]))
+                reversed_expr = reversed_expr.replace(match, replacer)
+
+            self._expr = reversed_expr[::-1]

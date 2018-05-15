@@ -45,16 +45,16 @@ class ModulesScope:
                     self._callable_objects.append(clb)
 
     def get_constants(self):
-        return list(self._constants)
+        return sorted(self._constants, key=lambda x: len(x.pattern), reverse=True)
 
     def get_callable_objects(self):
-        return list(self._callable_objects)
+        return sorted(self._callable_objects, key=lambda x: len(x.pattern), reverse=True)
 
 
 built_ins = ModuleLoader('builtins')
 
 
 if __name__ == '__main__':
-    m = ModulesScope(('math', 'sys', 'builtins'))
+    m = ModulesScope('math', 'builtins')
     print(m.get_constants())
 

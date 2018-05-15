@@ -1,5 +1,7 @@
+import os
 import unittest
 from collections import namedtuple
+from math import pi, e, log, sin, log10, cos
 
 from calcexpression import Expression, OPERATORS, CALLABLE_OBJECTS, CONSTANTS
 from moduleloader import ModulesScope
@@ -242,6 +244,94 @@ class TestExpressionMethods(unittest.TestCase):
         ]
         for arg, result in test_list:
             self.assertEqual(result, self.expr._startswith_operator(arg))
+
+
+class TestE2E(unittest.TestCase):
+
+    def setUp(self):
+        self.test_file = 'test_file.txt'
+        os.system('touch {}'.format(self.test_file))
+
+    def tearDown(self):
+        os.system('rm {}'.format(self.test_file))
+
+    def system_assert_equal(self, test_list):
+        for arg, result in test_list:
+            os.system('./pycalc.py "{}" > {}'.format(arg, self.test_file))
+            with open(self.test_file) as file:
+                self.assertEqual(''.join(file.readline().split()), str(result))
+
+    def test_unary_operators(self):
+        test_list = [
+            ('-13', -13),
+            ('6 - (-13)', (6 - (-13))),
+            ('1 - --1', (1 - --1)),
+            ('- +---+-1', (- +---+-1)),
+        ]
+        self.system_assert_equal(test_list)
+
+    def test_operator_priority(self):
+        test_list = [
+            ('1+2*2', eval('1+2*2')),
+            ('1+(2+32)3', eval('1+(2+32)*3')),
+            ('10*(2+1)', eval('10*(2+1)')),
+            ('10^(2+1)', eval('10**(2+1)')),
+            ('100/3^2', eval('100/3**2')),
+            ('100/3%2^2', eval('100/3%2**2')),
+        ]
+        self.system_assert_equal(test_list)
+
+    def test_function_and_constants(self):
+        test_list = [
+            ('pi+e', eval('pi+e')),
+            ('log(e)', eval('log(e)')),
+            ('sin(pi/2)', eval('sin(pi/2)')),
+            ('log10(100)', eval('log10(100)')),
+            ('sin(pi/2)1116', eval('sin(pi/2)*1116')),
+            ('2*sin(pi/2)', 2*sin(pi/2)),
+        ]
+        self.system_assert_equal(test_list)
+
+    def test_associative(self):
+        test_list = [
+            ("102%12%7", eval("102%12%7")),
+            ("100/4/3", eval("100/4/3")),
+            ("2^3^4", eval("2**3**4")),
+        ]
+        self.system_assert_equal(test_list)
+
+    def test_comparison_operators(self):
+        test_list = [
+            ("1+23==1+23", eval("1+23==1+23")),
+            ("e^5>=e^5+1", eval("e**5>=e**5+1")),
+            ("1+24/3+1!=1+24/3+2", eval("1+24/3+1!=1+24/3+2")),
+        ]
+        self.system_assert_equal(test_list)
+
+    def test_common(self):
+        test_list = [
+            ("(100)", eval("(100)")),
+            ("666", eval("666")),
+            ("10(2+1)", eval("10*(2+1)")),
+            ("-.1", eval("-.1")),
+            ("1/3", eval("1/3")),
+            ("1.0/3.0", eval("1.0/3.0")),
+            (".1 * 2.0^56.0", eval(".1 * 2.0**56.0")),
+            ("e^34", eval("e**34")),
+            ("(2.0^(pi/pi+e/e+2.0^0.0))", eval("(2.0**(pi/pi+e/e+2.0**0.0))")),
+            ("(2.0^(pi/pi+e/e+2.0^0.0))^(1.0/3.0)", eval("(2.0**(pi/pi+e/e+2.0**0.0))**(1.0/3.0)")),
+            ("sin(pi/2^1) + log(1*4+2^2+1, 3^2)", eval("sin(pi/2**1) + log(1*4+2**2+1, 3**2)")),
+            ("10*e^0*log10(.4* -5/ -0.1-10) - -abs(-53/10) + -5",
+             eval("10*e**0*log10(.4* -5/ -0.1-10) - -abs(-53/10) + -5")),
+
+            ("sin(-cos(-sin(3.0)-cos(-sin(-3.0*5.0)-sin(cos(log10(43.0))))+cos(sin(sin(34.0-2.0^2.0))))--cos(1.0)--cos(0.0)^3.0)",
+             eval("sin(-cos(-sin(3.0)-cos(-sin(-3.0*5.0)-sin(cos(log10(43.0))))+cos(sin(sin(34.0-2.0**2.0))))--cos(1.0)--cos(0.0)**3.0)")),
+            ("2.0^(2.0^2.0*2.0^2.0)",
+             eval("2.0**(2.0**2.0*2.0**2.0)")),
+            ("sin(e^log(e^e^sin(23.0),45.0) + cos(3.0+log10(e^-e)))",
+             eval("sin(e**log(e**e**sin(23.0),45.0) + cos(3.0+log10(e**-e)))")),
+        ]
+        self.system_assert_equal(test_list)
 
 
 if __name__ == '__main__':

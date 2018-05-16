@@ -1,6 +1,6 @@
 from operator import add, sub, mul, truediv, floordiv, mod, pow, lt, le, eq, ne, ge, gt
 from collections import namedtuple
-from moduleloader import built_ins
+from pycalc.moduleloader import built_ins
 import re
 
 Operator = namedtuple('Operator', 'pattern execute weight unary')

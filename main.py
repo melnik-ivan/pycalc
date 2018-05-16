@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-from moduleloader import ModulesScope
-from calcexpression import Expression
+from pycalc.moduleloader import ModulesScope
+from pycalc.calcexpression import Expression
 import argparse
 
 

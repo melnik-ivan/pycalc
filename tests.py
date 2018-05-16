@@ -3,8 +3,8 @@ import unittest
 from collections import namedtuple
 from math import pi, e, log, sin, log10, cos
 
-from calcexpression import Expression, OPERATORS, CALLABLE_OBJECTS, CONSTANTS
-from moduleloader import ModulesScope
+from pycalc.calcexpression import Expression, OPERATORS, CALLABLE_OBJECTS, CONSTANTS
+from pycalc.moduleloader import ModulesScope
 
 
 class TestExpressionMethods(unittest.TestCase):
@@ -257,7 +257,7 @@ class TestE2E(unittest.TestCase):
 
     def system_assert_equal(self, test_list):
         for arg, result in test_list:
-            os.system('./pycalc.py "{}" > {}'.format(arg, self.test_file))
+            os.system('./main.py "{}" > {}'.format(arg, self.test_file))
             with open(self.test_file) as file:
                 self.assertEqual(''.join(file.readline().split()), str(result))
 

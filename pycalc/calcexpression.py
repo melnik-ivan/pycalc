@@ -1,7 +1,8 @@
 from operator import add, sub, mul, truediv, floordiv, mod, pow, lt, le, eq, ne, ge, gt
 from collections import namedtuple
-from pycalc.moduleloader import built_ins
 import re
+
+from pycalc.moduleloader import built_ins
 
 Operator = namedtuple('Operator', 'pattern execute weight unary')
 Bracket = namedtuple('Bracket', 'side level')

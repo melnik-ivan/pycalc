@@ -52,9 +52,3 @@ class ModulesScope:
 
 
 built_ins = ModuleLoader('builtins')
-
-
-if __name__ == '__main__':
-    m = ModulesScope('math', 'builtins')
-    print(m.get_constants())
-

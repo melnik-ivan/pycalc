@@ -85,8 +85,8 @@ class Expression:
         self._bracket_left = bracket_left
         self._bracket_right = bracket_right
         self._expr = expr
-        self._preprocessing()
         self.validate()
+        self._preprocessing()
         self._brackets_content_placeholder = brackets_content_placeholder
         self._operators = sorted(operators, key=lambda x: x.weight)
         self._callable_objects = callable_objects

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-from pycalc.moduleloader import ModulesScope
-from pycalc.calcexpression import Expression
-import argparse
 
+def main():
+    from pycalc.moduleloader import ModulesScope
+    from pycalc.calcexpression import Expression
+    import argparse
 
-if __name__ == '__main__':
     modules = ['builtins', 'math']
     parser = argparse.ArgumentParser()
     parser.add_argument('EXPRESSION', help='expression string to evaluate')
@@ -22,3 +22,7 @@ if __name__ == '__main__':
         constants=modules_scope.get_constants()
     ).execute()
     print(result)
+
+
+if __name__ == '__main__':
+    main()

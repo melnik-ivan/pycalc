@@ -257,7 +257,7 @@ class TestE2E(unittest.TestCase):
 
     def system_assert_equal(self, test_list):
         for arg, result in test_list:
-            os.system('./main.py "{}" > {}'.format(arg, self.test_file))
+            os.system('python ./pycalc "{}" > {}'.format(arg, self.test_file))
             with open(self.test_file) as file:
                 self.assertEqual(''.join(file.readline().split()), str(result))
 

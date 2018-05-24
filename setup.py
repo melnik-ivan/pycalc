@@ -1,8 +1,5 @@
 from setuptools import setup
-import os
 
-os.mkdir('./bin')
-os.rename('main.py', 'bin/pycalc')
 
 setup(
     name='pycalc',
@@ -11,11 +8,13 @@ setup(
     url='https://Ivan_Melnik@git.epam.com/Ivan_Melnik/pycalc.git/',
     author='Ivan Melnik',
     author_email='ivan_melnik@epam.com',
-    scripts=['bin/pycalc'],
+    entry_points={
+        'console_scripts': [
+            'pycalc = pycalc.__main__:main'
+        ]
+    },
     license='MIT',
     packages=['pycalc'],
     zip_safe=False
 )
 
-os.rename('bin/pycalc', 'main.py')
-os.rmdir('./bin')

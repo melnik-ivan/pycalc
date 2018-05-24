@@ -8,7 +8,7 @@ cp ./main.py ./_package/bin/pycalc
 chmod +x ./_package/bin/pycalc
 cp ./setup.py ./_package/
 cd ./_package/
-tar cf ../package.tar *
+tar cf ../pycalc.tar *
 cd ..
 rm -rf ./_package/
-echo "OK"
+echo "DONE"

@@ -310,7 +310,7 @@ class TestE2E(unittest.TestCase):
 
     def test_common(self):
         test_list = [
-            ("(100)", (100)),
+            ("(100)", 100),
             ("666", 666),
             ("10(2+1)", 10 * (2 + 1)),
             ("-.1", -.1),
@@ -325,7 +325,8 @@ class TestE2E(unittest.TestCase):
              10 * e ** 0 * log10(.4 * -5 / -0.1 - 10) - -abs(-53 / 10) + -5),
 
             (
-                "sin(-cos(-sin(3.0)-cos(-sin(-3.0*5.0)-sin(cos(log10(43.0))))+cos(sin(sin(34.0-2.0^2.0))))--cos(1.0)--cos(0.0)^3.0)",
+                "sin(-cos(-sin(3.0)-cos(-sin(-3.0*5.0)-sin(cos(log10(43.0))))+" + \
+                "cos(sin(sin(34.0-2.0^2.0))))--cos(1.0)--cos(0.0)^3.0)",
                 sin(-cos(
                     -sin(3.0) - cos(-sin(-3.0 * 5.0) - sin(cos(log10(43.0)))) + cos(
                         sin(sin(34.0 - 2.0 ** 2.0)))) - -cos(

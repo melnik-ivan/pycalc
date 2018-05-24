@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='pycalc',
-    version='0.1',
+    version='0.0.1',
     description='Pure-python command-line calculator.',
     url='https://Ivan_Melnik@git.epam.com/Ivan_Melnik/pycalc.git/',
     author='Ivan Melnik',

@@ -1,3 +1,8 @@
+
+"""
+This module provides expression parsing tools.
+"""
+
 from operator import add, sub, mul, truediv, floordiv, mod, pow, lt, le, eq, ne, ge, gt
 from collections import namedtuple
 import re
@@ -5,10 +10,19 @@ import re
 from pycalc.moduleloader import built_ins
 
 Operator = namedtuple('Operator', 'pattern execute weight unary')
-Bracket = namedtuple('Bracket', 'side level')
 
 
 def comma_operator(left, right):
+    """
+    Imitates python comma operator. If one of operands is tuple,
+    unpacks this operand. Returns tuple of operands.
+
+    Positional arguments:
+        left: left operand
+        right: right operand
+
+    return: tuple(*operands)
+    """
     if type(left) is tuple and type(right) is tuple:
         return left + right
     elif type(left) is not tuple and type(right) is not tuple:
@@ -46,8 +60,28 @@ OPERATORS.sort(key=lambda op: op.weight)
 
 
 class Expression:
+    """
+    Generates expression model from string.
+    """
     def __init__(self, expr, bracket_left='(', bracket_right=')', brackets_content_placeholder='#', operators=OPERATORS,
                  callable_objects=CALLABLE_OBJECTS, constants=CONSTANTS):
+        """
+        Positional arguments:
+            expr: string with python-like (except power operator '^'
+                and syntax of abridged multiplication: '2(3+4)') expression.
+
+        Optional keyword arguments:
+            bracket_left: character of left bracket.
+            bracket_right: character of right bracket.
+            brackets_content_placeholder: character to be used as a stub
+                instead brackets content for temporary expressions.
+            operators: list of operators where operator is object with
+                attributes: pattern, execute, weight and unary
+            callable_objects: list of callable objects where callable object
+                is object with attributes: pattern and execute
+            constants: list of constants objects where constant is object
+                with attributes: pattern and execute
+        """
         self._bracket_left = bracket_left
         self._bracket_right = bracket_right
         self._expr = expr
@@ -59,13 +93,23 @@ class Expression:
         self._constants = constants
 
     def _preprocessing(self):
+        """
+        Prepares input string for parsing
+        """
         self._expr = ''.join(self._expr.split())
         self._uncover_multiplication()
 
     def execute(self):
+        """
+        Launches parsing and execution process.
+        Returns result of execution.
+        """
         return self._execute(self._expr)
 
     def _execute(self, expr):
+        """
+        Implements execution logic and parsing order.
+        """
         expr = self._cut_out_external_brackets(expr)
         expr_replaced = self._replace_brackets_content(expr)
 
@@ -94,6 +138,9 @@ class Expression:
         raise SyntaxError('01')
 
     def _execute_binary_operator(self, expr, expr_replaced, filter_=None, revert=True):
+        """
+        Implements execution logic for binary operators only.
+        """
         operator_idx = self._get_min_weight_binary_operator(expr_replaced, filter_, revert)
         if operator_idx:
             left, op, right = expr[:operator_idx[0]], expr[operator_idx[0]: operator_idx[1]], expr[operator_idx[1]:]
@@ -107,6 +154,9 @@ class Expression:
         return False, None
 
     def _execute_unary_operator(self, expr, expr_replaced, filter_=None):
+        """
+        Implements execution logic for unary operators only.
+        """
         unary_idx = self._get_min_weight_unary_operator(expr_replaced, filter_)
         if unary_idx:
             left, op, right = expr[:unary_idx[0]], expr[unary_idx[0]: unary_idx[1]], expr[unary_idx[1]:]
@@ -119,6 +169,9 @@ class Expression:
         return False, None
 
     def _execute_callable_object(self, expr, expr_replaced, filter_=None):
+        """
+        Implements execution logic for callable objects only.
+        """
         callable_idx = self._get_callable_slice(expr_replaced, filter_)
         if callable_idx:
             left, clb, right = expr[:callable_idx[0]], expr[callable_idx[0]: callable_idx[1]], expr[callable_idx[1]:]
@@ -140,11 +193,17 @@ class Expression:
         pass
 
     def _cut_out_external_brackets(self, expr):
+        """
+        Cuts out external brackets from expr
+        """
         while self._have_external_brackets(expr):
             expr = expr[1:-1]
         return expr
 
     def _have_external_brackets(self, expr):
+        """
+        Returns True if expr have external brackets else False
+        """
         if not (expr.startswith(self._bracket_left) and expr.endswith(self._bracket_right)):
             return False
         brackets_level = 0
@@ -158,6 +217,9 @@ class Expression:
         return True
 
     def _replace_brackets_content(self, expr):
+        """
+        Returns expr with replaced brackets content with self._brackets_content_placeholder
+        """
         result = []
         brackets_level = 0
         for sym in expr:
@@ -176,9 +238,20 @@ class Expression:
         return ''.join(result)
 
     def _operator_is_unary(self, expr, idx0):
+        """
+        Looks at expr and returns True if operator at idx0 is unary else returns False
+        """
         return bool(not expr[:idx0] or expr[:idx0].endswith(self._bracket_left) or self._endswith_operator(expr[:idx0]))
 
     def _get_min_weight_binary_operator(self, expr, filter_=None, revert=True):
+        """
+        Returns binary operator with minimal value of weight from sorted by weight
+        self._operators
+
+        Optional keyword arguments:
+            filter_: filter function what be applied to the operators list
+            revert: change direction of searching operators True (Default) <-
+        """
         operators = self._operators
         if filter_:
             operators = filter(filter_, operators)

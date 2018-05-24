@@ -1,4 +1,8 @@
 from setuptools import setup
+import os
+
+os.mkdir('./bin')
+os.rename('main.py', 'bin/pycalc')
 
 setup(
     name='pycalc',
@@ -12,3 +16,6 @@ setup(
     packages=['pycalc'],
     zip_safe=False
 )
+
+os.rename('bin/pycalc', 'main.py')
+os.rmdir('./bin')

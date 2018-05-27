@@ -5,6 +5,7 @@ from math import pi, e, log, sin, log10, cos
 
 from pycalc.calcexpression import Expression, OPERATORS, CALLABLE_OBJECTS, CONSTANTS
 from pycalc.moduleloader import ModulesScope
+from pycalc.__main__ import main as pycalc_main
 
 
 class TestExpressionMethods(unittest.TestCase):
@@ -248,18 +249,9 @@ class TestExpressionMethods(unittest.TestCase):
 
 class TestE2E(unittest.TestCase):
 
-    def setUp(self):
-        self.test_file = 'test_file.txt'
-        os.system('touch {}'.format(self.test_file))
-
-    def tearDown(self):
-        os.system('rm {}'.format(self.test_file))
-
-    def system_assert_equal(self, test_list):
+    def main_assert_equal(self, test_list):
         for arg, result in test_list:
-            os.system('python ./pycalc "{}" > {}'.format(arg, self.test_file))
-            with open(self.test_file) as file:
-                self.assertEqual(''.join(file.readline().split()), str(result))
+            self.assertEqual(pycalc_main(console_mod=False, expr=arg), result)
 
     def test_unary_operators(self):
         test_list = [
@@ -268,7 +260,7 @@ class TestE2E(unittest.TestCase):
             ('1 - --1', (1 - --1)),
             ('- +---+-1', (- +---+-1)),
         ]
-        self.system_assert_equal(test_list)
+        self.main_assert_equal(test_list)
 
     def test_operator_priority(self):
         test_list = [
@@ -279,7 +271,7 @@ class TestE2E(unittest.TestCase):
             ('100/3^2', 100 / 3 ** 2),
             ('100/3%2^2', 100 / 3 % 2 ** 2),
         ]
-        self.system_assert_equal(test_list)
+        self.main_assert_equal(test_list)
 
     def test_function_and_constants(self):
         test_list = [
@@ -290,7 +282,7 @@ class TestE2E(unittest.TestCase):
             ('sin(pi/2)1116', sin(pi / 2) * 1116),
             ('2*sin(pi/2)', 2 * sin(pi / 2)),
         ]
-        self.system_assert_equal(test_list)
+        self.main_assert_equal(test_list)
 
     def test_associative(self):
         test_list = [
@@ -298,7 +290,7 @@ class TestE2E(unittest.TestCase):
             ("100/4/3", 100 / 4 / 3),
             ("2^3^4", 2 ** 3 ** 4),
         ]
-        self.system_assert_equal(test_list)
+        self.main_assert_equal(test_list)
 
     def test_comparison_operators(self):
         test_list = [
@@ -306,7 +298,7 @@ class TestE2E(unittest.TestCase):
             ("e^5>=e^5+1", e ** 5 >= e ** 5 + 1),
             ("1+24/3+1!=1+24/3+2", 1 + 24 / 3 + 1 != 1 + 24 / 3 + 2),
         ]
-        self.system_assert_equal(test_list)
+        self.main_assert_equal(test_list)
 
     def test_common(self):
         test_list = [
@@ -336,7 +328,7 @@ class TestE2E(unittest.TestCase):
             ("sin(e^log(e^e^sin(23.0),45.0) + cos(3.0+log10(e^-e)))",
              sin(e ** log(e ** e ** sin(23.0), 45.0) + cos(3.0 + log10(e ** -e)))),
         ]
-        self.system_assert_equal(test_list)
+        self.main_assert_equal(test_list)
 
 
 if __name__ == '__main__':

@@ -1,4 +1,3 @@
-
 """
 This module provides expression parsing tools.
 """
@@ -194,7 +193,7 @@ class Expression:
 
     def _cut_out_external_brackets(self, expr):
         """
-        Cuts out external brackets from expr
+        Cuts out external brackets from expr.
         """
         while self._have_external_brackets(expr):
             expr = expr[1:-1]
@@ -202,7 +201,7 @@ class Expression:
 
     def _have_external_brackets(self, expr):
         """
-        Returns True if expr have external brackets else False
+        Returns True if expr have external brackets else False.
         """
         if not (expr.startswith(self._bracket_left) and expr.endswith(self._bracket_right)):
             return False
@@ -218,7 +217,7 @@ class Expression:
 
     def _replace_brackets_content(self, expr):
         """
-        Returns expr with replaced brackets content with self._brackets_content_placeholder
+        Returns expr with replaced brackets content with self._brackets_content_placeholder.
         """
         result = []
         brackets_level = 0
@@ -239,14 +238,14 @@ class Expression:
 
     def _operator_is_unary(self, expr, idx0):
         """
-        Looks at expr and returns True if operator at idx0 is unary else returns False
+        Looks at expr and returns True if operator at idx0 is unary else returns False.
         """
         return bool(not expr[:idx0] or expr[:idx0].endswith(self._bracket_left) or self._endswith_operator(expr[:idx0]))
 
     def _get_min_weight_binary_operator(self, expr, filter_=None, revert=True):
         """
         Returns binary operator with minimal value of weight from sorted by weight
-        self._operators
+        self._operators.
 
         Optional keyword arguments:
             filter_: filter function what be applied to the operators list
@@ -277,6 +276,13 @@ class Expression:
         return None
 
     def _get_min_weight_unary_operator(self, expr, filter_=None):
+        """
+        Returns unary operator with minimal value of weight from sorted by weight
+        self._operators.
+
+        Optional keyword arguments:
+            filter_: filter function what be applied to the operators list
+        """
         operators = self._operators
         if filter_:
             operators = filter(filter_, operators)
@@ -293,6 +299,12 @@ class Expression:
         return min_idxs
 
     def _get_callable_slice(self, expr, filter_=None):
+        """
+        Returns expr slice of callable object from self._callable_objects.
+
+        Optional keyword arguments:
+            filter_: filter function what be applied to the callable objects list
+        """
         callable_objects = self._callable_objects
         if filter_:
             callable_objects = filter(filter_, callable_objects)
@@ -305,6 +317,12 @@ class Expression:
 
     @staticmethod
     def _get_object(pattern, objects, filter_=None):
+        """
+        Returns object from objects where object.pattern equal to pattern argument.
+
+        Optional keyword arguments:
+            filter_: filter function what be applied to the objects list
+        """
         if filter_:
             objects = filter(filter_, objects)
         for obj in objects:
@@ -314,6 +332,10 @@ class Expression:
 
     @staticmethod
     def _get_number(pattern):
+        """
+        Returns float or int if pattern match for the corresponding constructor, else
+        returns None.
+        """
         try:
             return int(pattern)
         except ValueError:
@@ -326,18 +348,29 @@ class Expression:
         return None
 
     def _endswith_operator(self, expr):
+        """
+        Returns pattern of operator if expr endswith on it, else returns None.
+        """
         for op in self._operators:
             if expr.endswith(op.pattern):
                 return op.pattern
         return None
 
     def _startswith_operator(self, expr):
+        """
+        Returns pattern of operator if expr startswith on it, else returns None.
+        """
         for op in self._operators:
             if expr.startswith(op.pattern):
                 return op.pattern
         return None
 
     def _uncover_multiplication(self):
+        """
+        Uncovers shortened multiplication in self._expr.
+
+        Example: '2(2+2)' -> '2*(2+2)'
+        """
         rx1 = r'[\W](\d*\.?\d+?\{})'
         rx2 = r'^(\d*\.?\d+?\{})'
 

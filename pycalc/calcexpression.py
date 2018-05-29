@@ -7,6 +7,7 @@ from collections import namedtuple
 import re
 
 from pycalc.moduleloader import built_ins
+from pycalc.exceptions import PyCalcSyntaxError
 
 Operator = namedtuple('Operator', 'pattern execute weight unary')
 
@@ -31,7 +32,7 @@ def comma_operator(left, right):
     elif type(right) is tuple:
         return (left,) + right
     else:
-        raise TypeError
+        raise PyCalcSyntaxError('invalid syntax near ","')
 
 
 CONSTANTS = built_ins.get_constants()
@@ -134,7 +135,7 @@ class Expression:
             if result[0]:
                 return result[1]
 
-        raise SyntaxError('01')
+        raise PyCalcSyntaxError('invalid syntax near "{}"'.format(expr))
 
     def _execute_binary_operator(self, expr, expr_replaced, filter_=None, revert=True):
         """
@@ -149,7 +150,7 @@ class Expression:
             elif left != '' and right == '':
                 return True, op.execute(self._execute(left))
             else:
-                raise SyntaxError('02')
+                 PyCalcSyntaxError('invalid syntax near operator "{}"'.format(op.pattern))
         return False, None
 
     def _execute_unary_operator(self, expr, expr_replaced, filter_=None):
@@ -164,7 +165,7 @@ class Expression:
                 if op.unary:
                     return True, op.unary(self._execute(right))
                 else:
-                    raise SyntaxError('03')
+                    raise PyCalcSyntaxError('invalid syntax near operator "{}"'.format(op.pattern))
         return False, None
 
     def _execute_callable_object(self, expr, expr_replaced, filter_=None):
@@ -175,7 +176,7 @@ class Expression:
         if callable_idx:
             left, clb, right = expr[:callable_idx[0]], expr[callable_idx[0]: callable_idx[1]], expr[callable_idx[1]:]
             if left and not self._get_min_weight_unary_operator(left):
-                raise SyntaxError('04')
+                PyCalcSyntaxError('invalid syntax near callable object "{}"'.format(clb.pattern))
             clb = self._get_object(clb, self._callable_objects, filter_)
             if right != '':
                 res = self._execute(right)
@@ -233,7 +234,7 @@ class Expression:
             elif brackets_level == 0:
                 result.append(sym)
             else:
-                raise SyntaxError('invalid brackets structure')
+                raise PyCalcSyntaxError('invalid brackets are not balanced')
         return ''.join(result)
 
     def _operator_is_unary(self, expr, idx0):

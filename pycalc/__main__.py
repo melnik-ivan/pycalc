@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
+import argparse
 from collections import namedtuple
 
 from pycalc.moduleloader import ModulesScope
 from pycalc.calcexpression import Expression
-import argparse
+from pycalc.exceptions import exceptions_handler
+
 
 
 Arguments = namedtuple("Arguments", "EXPRESSION use_modules")
 
 
+@exceptions_handler
 def main(console_mod=True, expr=None, use_modules=None):
     args = None
     modules = ['builtins', 'math']

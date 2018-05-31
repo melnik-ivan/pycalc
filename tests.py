@@ -21,22 +21,9 @@ class TestExpressionMethods(unittest.TestCase):
 
     def test_init(self):
         arg = 'round(2*(- 5 +9^3), 2)'
-        bracket_left = '('
-        bracket_right = ')'
-        brackets_content_placeholder = '#'
         operators = OPERATORS
         callable_objects = CALLABLE_OBJECTS
         constants = CONSTANTS
-        self.assertEqual(bracket_left, Expression(arg, bracket_left=bracket_left)._bracket_left)
-        self.assertEqual(bracket_right, Expression(arg, bracket_right=bracket_right)._bracket_right)
-        self.assertEqual(
-            brackets_content_placeholder,
-            Expression(
-                arg,
-                brackets_content_placeholder=brackets_content_placeholder
-
-            )._brackets_content_placeholder
-        )
         self.assertEqual(sorted(operators, key=lambda x: x.weight), Expression(arg, operators=operators)._operators)
         self.assertEqual(callable_objects, Expression(arg, callable_objects=callable_objects)._callable_objects)
         self.assertEqual(constants, Expression(arg, constants=constants)._constants)
@@ -147,8 +134,7 @@ class TestExpressionMethods(unittest.TestCase):
             ('abs(sin(2))', 'abs########'),
             ('func1(arg) + func2(arg)', 'func1##### + func2#####'),
         ]
-        placeholder = '#'
-        expression = Expression('2+2', brackets_content_placeholder=placeholder)
+        expression = Expression('2+2')
         for arg, result in test_list:
             self.assertEqual(result, expression._replace_brackets_content(arg))
 

@@ -1,3 +1,6 @@
+"""
+Setup configuration
+"""
 from setuptools import setup
 
 
@@ -17,4 +20,3 @@ setup(
     packages=['pycalc'],
     zip_safe=False
 )
-

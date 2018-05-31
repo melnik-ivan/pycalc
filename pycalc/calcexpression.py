@@ -2,7 +2,7 @@
 This module provides expression parsing tools.
 """
 
-from operator import add, sub, mul, truediv, floordiv, mod, pow, lt, le, eq, ne, ge, gt
+from operator import add, sub, mul, truediv, floordiv, mod, lt, le, eq, ne, ge, gt
 from collections import namedtuple
 import re
 
@@ -23,13 +23,13 @@ def comma_operator(left, right):
 
     return: tuple(*operands)
     """
-    if type(left) is tuple and type(right) is tuple:
+    if isinstance(left, tuple) and isinstance(right, tuple):
         return left + right
-    elif type(left) is not tuple and type(right) is not tuple:
+    elif not isinstance(left, tuple) and not isinstance(right, tuple):
         return left, right
-    elif type(left) is tuple:
+    elif isinstance(left, tuple):
         return left + (right,)
-    elif type(right) is tuple:
+    elif isinstance(right, tuple):
         return (left,) + right
     else:
         raise PyCalcSyntaxError('invalid syntax near ","')
@@ -63,8 +63,7 @@ class Expression:
     """
     Generates expression model from string.
     """
-    def __init__(self, expr, bracket_left='(', bracket_right=')', brackets_content_placeholder='#', operators=OPERATORS,
-                 callable_objects=CALLABLE_OBJECTS, constants=CONSTANTS):
+    def __init__(self, expr, operators=None, callable_objects=None, constants=None):
         """
         Positional arguments:
             expr: string with python-like (except power operator '^'
@@ -82,15 +81,18 @@ class Expression:
             constants: list of constants objects where constant is object
                 with attributes: pattern and execute
         """
-        self._bracket_left = bracket_left
-        self._bracket_right = bracket_right
+        self._bracket_left = '('
+        self._bracket_right = ')'
         self._expr = expr
         self.validate()
         self._preprocessing()
-        self._brackets_content_placeholder = brackets_content_placeholder
+        self._brackets_content_placeholder = '#'
+        operators = operators or OPERATORS
+        callable_objects = callable_objects or CALLABLE_OBJECTS
+        constants = constants or CONSTANTS
         self._operators = sorted(operators, key=lambda x: x.weight)
-        self._callable_objects = callable_objects
-        self._constants = constants
+        self._callable_objects = list(callable_objects)
+        self._constants = list(constants)
 
     def _preprocessing(self):
         """
@@ -122,7 +124,8 @@ class Expression:
             return result.value
 
         execute_list = [
-            (self._execute_binary_operator, (expr, expr_replaced), {'filter_': lambda x: x.pattern != '^'}),
+            (self._execute_binary_operator, (expr, expr_replaced),
+             {'filter_': lambda x: x.pattern != '^'}),
             (self._execute_unary_operator, (expr, expr_replaced),
              {'filter_': lambda x: x.pattern == '-' or x.pattern == '+'}),
             (self._execute_binary_operator, (expr, expr_replaced),
@@ -143,14 +146,16 @@ class Expression:
         """
         operator_idx = self._get_min_weight_binary_operator(expr_replaced, filter_, revert)
         if operator_idx:
-            left, op, right = expr[:operator_idx[0]], expr[operator_idx[0]: operator_idx[1]], expr[operator_idx[1]:]
-            op = self._get_object(op, self._operators, filter_)
+            left = expr[:operator_idx[0]]
+            operator = expr[operator_idx[0]: operator_idx[1]]
+            right = expr[operator_idx[1]:]
+            operator = self._get_object(operator, self._operators, filter_)
             if (left != '') and (right != ''):
-                return True, op.execute(self._execute(left), self._execute(right))
+                return True, operator.execute(self._execute(left), self._execute(right))
             elif left != '' and right == '':
-                return True, op.execute(self._execute(left))
+                return True, operator.execute(self._execute(left))
             else:
-                 PyCalcSyntaxError('invalid syntax near operator "{}"'.format(op.pattern))
+                PyCalcSyntaxError('invalid syntax near operator "{}"'.format(operator.pattern))
         return False, None
 
     def _execute_unary_operator(self, expr, expr_replaced, filter_=None):
@@ -159,13 +164,17 @@ class Expression:
         """
         unary_idx = self._get_min_weight_unary_operator(expr_replaced, filter_)
         if unary_idx:
-            left, op, right = expr[:unary_idx[0]], expr[unary_idx[0]: unary_idx[1]], expr[unary_idx[1]:]
-            op = self._get_object(op, self._operators, filter_)
+            left = expr[:unary_idx[0]]
+            operator = expr[unary_idx[0]: unary_idx[1]]
+            right = expr[unary_idx[1]:]
+            operator = self._get_object(operator, self._operators, filter_)
             if right and left == '':
-                if op.unary:
-                    return True, op.unary(self._execute(right))
+                if operator.unary:
+                    return True, operator.unary(self._execute(right))
                 else:
-                    raise PyCalcSyntaxError('invalid syntax near operator "{}"'.format(op.pattern))
+                    raise PyCalcSyntaxError(
+                        'invalid syntax near operator "{}"'.format(operator.pattern)
+                    )
         return False, None
 
     def _execute_callable_object(self, expr, expr_replaced, filter_=None):
@@ -174,21 +183,24 @@ class Expression:
         """
         callable_idx = self._get_callable_slice(expr_replaced, filter_)
         if callable_idx:
-            left, clb, right = expr[:callable_idx[0]], expr[callable_idx[0]: callable_idx[1]], expr[callable_idx[1]:]
+            left = expr[:callable_idx[0]]
+            clb = expr[callable_idx[0]: callable_idx[1]]
+            right = expr[callable_idx[1]:]
             if left and not self._get_min_weight_unary_operator(left):
                 PyCalcSyntaxError('invalid syntax near callable object "{}"'.format(clb.pattern))
             clb = self._get_object(clb, self._callable_objects, filter_)
             if right != '':
                 res = self._execute(right)
-                if type(res) is tuple:
+                if isinstance(res, tuple):
                     return True, clb.execute(*res)
-                else:
-                    return True, clb.execute(res)
-            else:
-                return True, clb.execute()
+                return True, clb.execute(res)
+            return True, clb.execute()
         return False, None
 
     def validate(self):
+        """
+        Runs validators. If any of them is failed raise corresponding exception.
+        """
         # Todo: validators
         pass
 
@@ -241,7 +253,9 @@ class Expression:
         """
         Looks at expr and returns True if operator at idx0 is unary else returns False.
         """
-        return bool(not expr[:idx0] or expr[:idx0].endswith(self._bracket_left) or self._endswith_operator(expr[:idx0]))
+        return bool(not expr[:idx0] or
+                    expr[:idx0].endswith(self._bracket_left) or
+                    self._endswith_operator(expr[:idx0]))
 
     def _get_min_weight_binary_operator(self, expr, filter_=None, revert=True):
         """
@@ -255,23 +269,23 @@ class Expression:
         operators = self._operators
         if filter_:
             operators = filter(filter_, operators)
-        for op in operators:
-            if op.pattern in expr:
+        for operator in operators:
+            if operator.pattern in expr:
                 idx0 = -1
                 idx1 = 0
                 while True:
                     if not revert:
-                        idx0 = expr[idx1:].find(op.pattern)
+                        idx0 = expr[idx1:].find(operator.pattern)
                         if idx0 < 0:
                             break
-                        idx1 = idx0 + len(op.pattern)
+                        idx1 = idx0 + len(operator.pattern)
                         if not self._operator_is_unary(expr, idx0):
                             return idx0, idx1
                     else:
-                        idx0 = expr[:idx0].rfind(op.pattern)
+                        idx0 = expr[:idx0].rfind(operator.pattern)
                         if idx0 < 0:
                             break
-                        idx1 = idx0 + len(op.pattern)
+                        idx1 = idx0 + len(operator.pattern)
                         if not self._operator_is_unary(expr, idx0):
                             return idx0, idx1
         return None
@@ -287,17 +301,17 @@ class Expression:
         operators = self._operators
         if filter_:
             operators = filter(filter_, operators)
-        min_idxs = None
-        for op in operators:
-            if op.pattern in expr:
-                idx0 = expr.find(op.pattern)
-                idx1 = idx0 + len(op.pattern)
+        min_indexes = ()
+        for operator in operators:
+            if operator.pattern in expr:
+                idx0 = expr.find(operator.pattern)
+                idx1 = idx0 + len(operator.pattern)
                 if self._operator_is_unary(expr, idx0):
-                    if min_idxs and min_idxs[0] > idx0:
-                        min_idxs = idx0, idx1
-                    if not min_idxs:
-                        min_idxs = idx0, idx1
-        return min_idxs
+                    if min_indexes and min_indexes[0] > idx0:
+                        min_indexes = idx0, idx1
+                    if not min_indexes:
+                        min_indexes = idx0, idx1
+        return min_indexes or None
 
     def _get_callable_slice(self, expr, filter_=None):
         """
@@ -352,18 +366,18 @@ class Expression:
         """
         Returns pattern of operator if expr endswith on it, else returns None.
         """
-        for op in self._operators:
-            if expr.endswith(op.pattern):
-                return op.pattern
+        for operator in self._operators:
+            if expr.endswith(operator.pattern):
+                return operator.pattern
         return None
 
     def _startswith_operator(self, expr):
         """
         Returns pattern of operator if expr startswith on it, else returns None.
         """
-        for op in self._operators:
-            if expr.startswith(op.pattern):
-                return op.pattern
+        for operator in self._operators:
+            if expr.startswith(operator.pattern):
+                return operator.pattern
         return None
 
     def _uncover_multiplication(self):
@@ -372,12 +386,12 @@ class Expression:
 
         Example: '2(2+2)' -> '2*(2+2)'
         """
-        rx1 = r'[\W](\d*\.?\d+?\{})'
-        rx2 = r'^(\d*\.?\d+?\{})'
+        regular_expression_1 = r'[\W](\d*\.?\d+?\{})'
+        regular_expression_2 = r'^(\d*\.?\d+?\{})'
 
-        for rx in rx1, rx2:
+        for regular_expression in regular_expression_1, regular_expression_2:
             bracket = self._bracket_left
-            match_list = re.findall(rx.format(bracket), self._expr)
+            match_list = re.findall(regular_expression.format(bracket), self._expr)
             for match in match_list:
                 replacer = ''.join((match[:-1], '*', match[-1]))
                 self._expr = self._expr.replace(match, replacer)
@@ -385,7 +399,7 @@ class Expression:
             reversed_expr = self._expr[::-1]
 
             bracket = self._bracket_right
-            match_list = re.findall(rx.format(bracket), reversed_expr)
+            match_list = re.findall(regular_expression.format(bracket), reversed_expr)
             for match in match_list:
                 replacer = ''.join((match[:-1], '*', match[-1]))
                 reversed_expr = reversed_expr.replace(match, replacer)

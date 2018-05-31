@@ -4,3 +4,4 @@ venv/
 *htmlcov/
 .idea/
 .coverage
+.buildconfig

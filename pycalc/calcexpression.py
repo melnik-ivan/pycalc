@@ -6,7 +6,7 @@ from operator import add, sub, mul, truediv, floordiv, mod, lt, le, eq, ne, ge, 
 from collections import namedtuple
 import re
 
-from pycalc.moduleloader import built_ins
+from pycalc.moduleloader import BUILT_INS
 from pycalc.exceptions import PyCalcSyntaxError
 
 Operator = namedtuple('Operator', 'pattern execute weight unary')
@@ -35,9 +35,9 @@ def comma_operator(left, right):
         raise PyCalcSyntaxError('invalid syntax near ","')
 
 
-CONSTANTS = built_ins.get_constants()
+CONSTANTS = BUILT_INS.get_constants()
 
-CALLABLE_OBJECTS = built_ins.get_callable_objects()
+CALLABLE_OBJECTS = BUILT_INS.get_callable_objects()
 
 OPERATORS = [
     Operator(',', comma_operator, -1, None),

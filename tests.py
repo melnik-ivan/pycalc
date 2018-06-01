@@ -237,7 +237,7 @@ class TestE2E(unittest.TestCase):
 
     def main_assert_equal(self, test_list):
         for arg, result in test_list:
-            self.assertEqual(pycalc_main(console_mod=False, expr=arg), result)
+            self.assertEqual(pycalc_main(expr=arg, silent=True), result)
 
     def test_unary_operators(self):
         test_list = [

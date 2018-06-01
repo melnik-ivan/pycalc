@@ -1,3 +1,3 @@
 """
-provides pycalc functionality
+Provides pycalc functionality.
 """

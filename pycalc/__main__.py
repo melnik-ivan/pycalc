@@ -39,7 +39,8 @@ def main(expr=None, use_modules=None, silent=False):
     ).execute()
     if not silent:
         print(result)
-    return result
+    else:
+        return result
 
 
 if __name__ == '__main__':

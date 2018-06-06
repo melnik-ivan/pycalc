@@ -4,6 +4,7 @@ from collections import namedtuple
 from math import pi, e, log, sin, log10, cos
 
 from pycalc.calcexpression import Expression, OPERATORS, CALLABLE_OBJECTS, CONSTANTS
+from pycalc.exceptions import PyCalcSyntaxError
 from pycalc.moduleloader import ModulesScope
 from pycalc.__main__ import main as pycalc_main
 
@@ -232,19 +233,44 @@ class TestExpressionMethods(unittest.TestCase):
         for arg, result in test_list:
             self.assertEqual(result, self.expr._startswith_operator(arg))
 
+    def test_error_cases(self):
+        test_list = [
+            "",
+            "+",
+            "1-",
+            "1 2",
+            "ee",
+            "123e",
+            "==7",
+            "1 * * 2",
+            "1 + 2(3 * 4))",
+            "((1+2)",
+            "1 + 1 2 3 4 5 6 ",
+            "log100(100)",
+            "------",
+            "5 > = 6",
+            "5 / / 6",
+            "6 < = 6",
+            "6 * * 6",
+            "(((((",
+        ]
+        for arg in test_list:
+            with self.assertRaises(PyCalcSyntaxError, msg=arg):
+                Expression(arg, callable_objects=CALLABLE_OBJECTS, constants=CONSTANTS, operators=OPERATORS).execute()
+
 
 class TestE2E(unittest.TestCase):
 
     def main_assert_equal(self, test_list):
         for arg, result in test_list:
-            self.assertEqual(pycalc_main(expr=arg, silent=True), result)
+            self.assertEqual(pycalc_main(expr=arg, silent=True), result, msg=arg)
 
     def test_unary_operators(self):
         test_list = [
             ('-13', -13),
             ('6 - (-13)', (6 - (-13))),
-            ('1 - --1', (1 - --1)),
-            ('- +---+-1', (- +---+-1)),
+            ('1 ---1', (1 - --1)),
+            ('-+---+-1', (- +---+-1)),
         ]
         self.main_assert_equal(test_list)
 
@@ -299,7 +325,7 @@ class TestE2E(unittest.TestCase):
             ("(2.0^(pi/pi+e/e+2.0^0.0))", (2.0 ** (pi / pi + e / e + 2.0 ** 0.0))),
             ("(2.0^(pi/pi+e/e+2.0^0.0))^(1.0/3.0)", (2.0 ** (pi / pi + e / e + 2.0 ** 0.0)) ** (1.0 / 3.0)),
             ("sin(pi/2^1) + log(1*4+2^2+1, 3^2)", sin(pi / 2 ** 1) + log(1 * 4 + 2 ** 2 + 1, 3 ** 2)),
-            ("10*e^0*log10(.4* -5/ -0.1-10) - -abs(-53/10) + -5",
+            ("10*e^0*log10(.4* -5/ -0.1-10) --abs(-53/10) +-5",
              10 * e ** 0 * log10(.4 * -5 / -0.1 - 10) - -abs(-53 / 10) + -5),
 
             (

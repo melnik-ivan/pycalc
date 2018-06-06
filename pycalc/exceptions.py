@@ -6,7 +6,7 @@ import sys
 from functools import wraps
 
 
-class PyCalcSyntaxError(BaseException):
+class PyCalcSyntaxError(Exception):
     """
     Pycalc exception with message attribute.
     """

@@ -63,6 +63,7 @@ class Expression:
     """
     Generates expression model from string.
     """
+
     def __init__(self, expr, operators=None, callable_objects=None, constants=None):
         """
         Positional arguments:
@@ -84,8 +85,6 @@ class Expression:
         self._bracket_left = '('
         self._bracket_right = ')'
         self._expr = expr
-        self.validate()
-        self._preprocessing()
         self._brackets_content_placeholder = '#'
         operators = operators or OPERATORS
         callable_objects = callable_objects or CALLABLE_OBJECTS
@@ -93,6 +92,8 @@ class Expression:
         self._operators = sorted(operators, key=lambda x: x.weight)
         self._callable_objects = list(callable_objects)
         self._constants = list(constants)
+        self.validate()
+        self._preprocessing()
 
     def _preprocessing(self):
         """
@@ -201,8 +202,38 @@ class Expression:
         """
         Runs validators. If any of them is failed raise corresponding exception.
         """
-        # Todo: validators
-        pass
+        self.empty_expression_validator()
+        self.spaces_validator()
+
+    def empty_expression_validator(self):
+        """
+        Verifies that the expression is not empty.
+        """
+        if not self._expr:
+            raise PyCalcSyntaxError('empty expression')
+
+    def spaces_validator(self):
+        """
+        Verifies that the expression is not contains unexpected spaces.
+        """
+        operator_patterns = [operator.pattern for operator in self._operators]
+        operator_patterns += ['!', '=']
+        nun_patterns = [str(integer) for integer in range(10)]
+        nun_patterns.append('.')
+        unexpected_patterns = ['{} {}'.format(pattern1, pattern2)
+                               for pattern1 in operator_patterns
+                               for pattern2 in operator_patterns]
+        unexpected_patterns += ['{} {}'.format(pattern1, pattern2)
+                                for pattern1 in nun_patterns
+                                for pattern2 in nun_patterns]
+        expected_patterns = ['{} {}'.format(pattern1, pattern2)
+                             for pattern1 in ('^', '*', '=', '<', '>', '/')
+                             for pattern2 in ('-', '+')]
+        for pattern in expected_patterns:
+            unexpected_patterns.remove(pattern)
+        for unexpected_pattern in unexpected_patterns:
+            if unexpected_pattern in self._expr:
+                raise PyCalcSyntaxError('unexpected space: "{}"'.format(unexpected_pattern))
 
     def _cut_out_external_brackets(self, expr):
         """

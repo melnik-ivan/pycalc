@@ -31,8 +31,11 @@ def exceptions_handler(func):
         except PyCalcSyntaxError as error:
             print("ERROR: {}".format(error.message))
             sys.exit(2)
-        except:
-            print("ERROR: unexpected error")
+        except ZeroDivisionError:
+            print("ERROR: zero division error")
+            sys.exit(2)
+        except RecursionError:
+            print("ERROR: the expression is too long")
             sys.exit(2)
         return result
     return wrapper

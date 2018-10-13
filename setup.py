@@ -8,7 +8,7 @@ setup(
     name='pycalc',
     version='0.0.1',
     description='Pure-python command-line calculator.',
-    url='https://Ivan_Melnik@git.epam.com/Ivan_Melnik/pycalc.git/',
+    url='https://github.com/melnik-ivan/pycalc.git',
     author='Ivan Melnik',
     author_email='ivan_melnik@epam.com',
     entry_points={
